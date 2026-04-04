@@ -1,0 +1,122 @@
+spring:
+  application:
+    name: library-management
+
+  # ============================================================
+  # DATABASE — MySQL
+  # Dùng HikariCP (default pool của Spring Boot) — hiệu năng cao
+  # ============================================================
+  datasource:
+    url: jdbc:mysql://localhost:3306/library_db?useSSL=${DB_USE_SSL:false}&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=${DB_ALLOW_PUBLIC_KEY:true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # ============================================================
+  # JPA / HIBERNATE
+  # ddl-auto: validate — Flyway quản lý schema, Hibernate chỉ validate
+  # ============================================================
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false # Tắt ở production, bật qua profile dev nếu cần
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        default_batch_fetch_size: 20 # Tối ưu N+1 query
+    open-in-view: false # Tắt OSIV để tránh lazy loading ngoài transaction
+
+  # ============================================================
+  # FLYWAY — Database Migration
+  # ============================================================
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  # ============================================================
+  # CACHE — Dùng simple (in-memory) vì không có Redis local
+  # Đổi sang redis khi deploy production với Redis server
+  # ============================================================
+  cache:
+    type: simple
+
+  # ============================================================
+  # EMAIL — Gmail SMTP (dùng App Password, không dùng pass thực)
+  # ============================================================
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+  # ============================================================
+  # OAUTH2 — Google & GitHub
+  # Đăng ký tại: console.developers.google.com & github.com/settings/applications
+  # ============================================================
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope:
+              - user:email
+              - read:user
+
+# ============================================================
+# SERVER CONFIG
+# ============================================================
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  error:
+    include-message: never # Không lộ stack trace ra response
+    include-stacktrace: never
+
+# ============================================================
+# JWT CONFIG (custom properties)
+# ============================================================
+app:
+  jwt:
+    secret: ${JWT_SECRET} # BẮT BUỘC đặt biến môi trường, không dùng giá trị mặc định (>= 256-bit key)
+    expiration: 86400000 # 1 ngày (ms) — Access Token
+    refresh-expiration: 604800000 # 7 ngày (ms) — Refresh Token
+  password-reset:
+    token-expiration: 900000 # 15 phút (ms)
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+# ============================================================
+# LOGGING
+# ============================================================
+logging:
+  level:
+    root: INFO
+    com.nhom10.library: DEBUG
+    org.springframework.security: INFO

@@ -1,0 +1,143 @@
+# ============================================================
+# Docker Compose - Library Management System
+# Services: App, MySQL, Redis
+# ============================================================
+
+services:
+  # ============================================================
+  # MySQL Database Service
+  # ============================================================
+  mysql:
+    image: mysql:8
+    container_name: library-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-library_db}
+      MYSQL_USER: ${MYSQL_USER:-library_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-library_pass}
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      # Persist MySQL data
+      - mysql-data:/var/lib/mysql
+      # Mount initialization scripts
+      - ./src/main/resources/db/migration:/docker-entrypoint-initdb.d:ro
+    networks:
+      - library-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "${MYSQL_USER:-library_user}",
+          "-p${MYSQL_PASSWORD:-library_pass}",
+        ]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    restart: unless-stopped
+
+  # ============================================================
+  # Redis Cache Service
+  # ============================================================
+  redis:
+    image: redis:7
+    container_name: library-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_pass}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      # Persist Redis data
+      - redis-data:/data
+    networks:
+      - library-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+    restart: unless-stopped
+
+  # ============================================================
+  # Spring Boot Application
+  # ============================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+    container_name: library-app
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Spring Boot Configuration
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-library_db}?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-library_user}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-library_pass}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+
+      # JPA/Hibernate
+      SPRING_JPA_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_SHOW_SQL: "false"
+
+      # Redis Configuration
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secure_pass}
+      SPRING_DATA_REDIS_TIMEOUT: 60000ms
+
+      # Application Profile
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-production}
+
+      # Server Configuration
+      SERVER_PORT: "8080"
+      SERVER_SERVLET_CONTEXT_PATH: /
+
+      # Logging
+      LOGGING_LEVEL_ROOT: INFO
+      LOGGING_LEVEL_COM_NHOM10: INFO
+
+      # JVM Options
+      JAVA_OPTS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.awt.headless=true
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    networks:
+      - library-network
+    volumes:
+      # Optional: Mount logs directory
+      - app-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+
+# ============================================================
+# Networks
+# ============================================================
+networks:
+  library-network:
+    driver: bridge
+
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  app-logs:
+    driver: local

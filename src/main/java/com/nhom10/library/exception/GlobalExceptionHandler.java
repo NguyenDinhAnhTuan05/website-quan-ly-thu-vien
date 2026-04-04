@@ -1,0 +1,153 @@
+package com.nhom10.library.exception;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * Xử lý Exception tập trung cho toàn bộ REST API.
+ *
+ * Nguyên tắc:
+ *  - KHÔNG để lộ stack trace ra response (đã config trong application.yml).
+ *  - Log đầy đủ ở server side để debug.
+ *  - Trả về error response chuẩn JSON với: timestamp, status, error, message, path.
+ */
+@RestControllerAdvice
+@Slf4j
+public class GlobalExceptionHandler {
+
+    // ================================================================
+    // 400 — VALIDATION ERRORS
+    // ================================================================
+
+    /**
+     * @Valid trên @RequestBody thất bại → MethodArgumentNotValidException.
+     * Trả về tất cả field errors trong một response duy nhất.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationErrors(
+            MethodArgumentNotValidException ex, WebRequest request) {
+
+        Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+            .collect(Collectors.toMap(
+                FieldError::getField,
+                fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "Giá trị không hợp lệ",
+                (existing, replacement) -> existing // Giữ lỗi đầu tiên nếu field trùng
+            ));
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Dữ liệu không hợp lệ",
+            request, Map.of("errors", fieldErrors));
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(
+            BadRequestException ex, WebRequest request) {
+        log.warn("Bad request: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidBorrowStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidBorrowStatus(
+            InvalidBorrowStatusException ex, WebRequest request) {
+        log.warn("Invalid borrow status: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    // ================================================================
+    // 401 — AUTHENTICATION ERRORS
+    // ================================================================
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleBadCredentials(
+            BadCredentialsException ex, WebRequest request) {
+        // Không log chi tiết — tránh credential stuffing log spam
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED,
+            "Email hoặc mật khẩu không đúng.", request, null);
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleDisabled(
+            DisabledException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
+    }
+
+    // ================================================================
+    // 403 — FORBIDDEN
+    // ================================================================
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(
+            ForbiddenException ex, WebRequest request) {
+        log.warn("Forbidden: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request, null);
+    }
+
+    // ================================================================
+    // 404 — NOT FOUND
+    // ================================================================
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(
+            ResourceNotFoundException ex, WebRequest request) {
+        log.warn("Resource not found: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    // ================================================================
+    // 409 — CONFLICT
+    // ================================================================
+
+    @ExceptionHandler(BookNotAvailableException.class)
+    public ResponseEntity<Map<String, Object>> handleBookNotAvailable(
+            BookNotAvailableException ex, WebRequest request) {
+        log.info("Book not available: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    // ================================================================
+    // 500 — UNEXPECTED ERRORS (catch-all)
+    // ================================================================
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(
+            Exception ex, WebRequest request) {
+        // Log exception class + message ở server, stack trace chỉ ở DEBUG level
+        // → Production (level=INFO) sẽ không lưu full stack trace vào log
+        log.error("Unexpected error at '{}': [{}] {}",
+            request.getDescription(false), ex.getClass().getSimpleName(), ex.getMessage());
+        log.debug("Full stack trace for debugging:", ex);
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+            "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.", request, null);
+    }
+
+    // ================================================================
+    // PRIVATE BUILDER
+    // ================================================================
+
+    private ResponseEntity<Map<String, Object>> buildErrorResponse(
+            HttpStatus status, String message, WebRequest request,
+            Map<String, Object> extraFields) {
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", message);
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+        if (extraFields != null) {
+            body.putAll(extraFields);
+        }
+        return ResponseEntity.status(status).body(body);
+    }
+}

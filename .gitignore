@@ -1,0 +1,77 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Uploads ###
+uploads/
+
+### Archive / Backup files ###
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.bak
+
+### Environment secrets — KHÔNG BAO GIỜ commit ###
+.env
+.env.*
+!.env.example
+
+### Log files ###
+*.log
+log/
+
+### Build output ###
+target/
+**/node_modules/
+frontend/dist/
+
+### OS generated ###
+Thumbs.db
+.DS_Store
+desktop.ini
+
+### Compile output ###
+compile_output.txt
+test_output*.txt
+
+### Auto-generated docs ###
+AVATAR_UPLOAD_FEATURE.md
+COMPONENT_REFACTORING_SUMMARY.md
+FRONTEND_REDESIGN_SUMMARY.md
+MONITORING_STATUS.md
+QUICK_TEST_CHECKLIST.md
+REPORT_ISSUE.md
+STEP_BY_STEP_TESTING.md
+VIBRANT_DESIGN_UPDATE.md
+frontend_design_plan.md
