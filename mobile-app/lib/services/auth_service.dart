@@ -11,7 +11,7 @@ class AuthService with ChangeNotifier {
 
   Future<void> checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final token = prefs.getString('accessToken');
     if (token != null && token.isNotEmpty) {
       _isAuthenticated = true;
     } else {
@@ -29,10 +29,14 @@ class AuthService with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final token = data['token']; // Xác nhận field theo backend response thật (thường là 'token' hoặc 'accessToken')
-        if (token != null) {
+        final accessToken = data['accessToken'];
+        final refreshToken = data['refreshToken'];
+        if (accessToken != null) {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('token', token);
+          await prefs.setString('accessToken', accessToken);
+          if (refreshToken != null) {
+            await prefs.setString('refreshToken', refreshToken);
+          }
           _isAuthenticated = true;
           notifyListeners();
           return true;
@@ -46,8 +50,7 @@ class AuthService with ChangeNotifier {
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    await _apiService.clearTokens();
     _isAuthenticated = false;
     notifyListeners();
   }

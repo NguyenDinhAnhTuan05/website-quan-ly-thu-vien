@@ -6,6 +6,7 @@ import com.nhom10.library.security.jwt.JwtAccessDeniedHandler;
 import com.nhom10.library.security.jwt.JwtAuthenticationEntryPoint;
 import com.nhom10.library.security.jwt.JwtAuthenticationFilter;
 import com.nhom10.library.security.oauth2.CustomOAuth2UserService;
+import com.nhom10.library.security.oauth2.CustomOidcUserService;
 import com.nhom10.library.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.nhom10.library.security.oauth2.OAuth2AuthenticationFailureHandler;
 import com.nhom10.library.security.oauth2.OAuth2AuthenticationSuccessHandler;
@@ -55,6 +56,7 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     private final HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
@@ -72,6 +74,22 @@ public class SecurityConfig {
 
             // ── 2. CORS: cấu hình từ bean corsConfigurationSource() ──────────
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+            // ── 2b. Security Headers ─────────────────────────────────────────
+            .headers(headers -> headers
+                .contentTypeOptions(cto -> {})              // X-Content-Type-Options: nosniff
+                .frameOptions(fo -> fo.deny())              // X-Frame-Options: DENY
+                .httpStrictTransportSecurity(hsts -> hsts    // Strict-Transport-Security
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000)
+                )
+                .xssProtection(xss -> xss
+                    .headerValue(org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)
+                )
+                .referrerPolicy(rp -> rp
+                    .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+                )
+            )
 
             // ── 3. Session: STATELESS (không tạo JSESSIONID) ─────────────────
             .sessionManagement(session ->
@@ -97,12 +115,16 @@ public class SecurityConfig {
                 // Image proxy — <img> tags can't send JWT headers
                 .requestMatchers(HttpMethod.GET, "/api/proxy/image").permitAll()
 
-                // GET public — ai cũng xem được sách, category, author, series
+                // Uploaded files (avatars, etc.) — served as static resources
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+
+                // GET public — ai cũng xem được sách, category, author, series, subscription plans
                 .requestMatchers(HttpMethod.GET,
                     "/api/books/**",
                     "/api/categories/**",
                     "/api/authors/**",
-                    "/api/series/**"
+                    "/api/series/**",
+                    "/api/subscriptions/plans"
                 ).permitAll()
 
                 // Admin + Super Admin — quản lý toàn hệ thống
@@ -128,6 +150,7 @@ public class SecurityConfig {
                 )
                 .userInfoEndpoint(uie -> uie
                     .userService(customOAuth2UserService)
+                    .oidcUserService(customOidcUserService)
                 )
                 .successHandler(oAuth2AuthenticationSuccessHandler)
                 .failureHandler(oAuth2AuthenticationFailureHandler)

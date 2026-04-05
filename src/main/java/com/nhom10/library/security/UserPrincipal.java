@@ -5,6 +5,9 @@ import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Collection;
@@ -21,7 +24,7 @@ import java.util.Map;
  *  - Dễ dàng thêm OAuth2 attributes mà không "ô nhiễm" entity.
  */
 @Getter
-public class UserPrincipal implements UserDetails, OAuth2User {
+public class UserPrincipal implements UserDetails, OAuth2User, OidcUser {
 
     private final Long id;
     private final String email;
@@ -31,6 +34,10 @@ public class UserPrincipal implements UserDetails, OAuth2User {
 
     // OAuth2 attributes — null khi login bằng form/JWT
     private Map<String, Object> attributes;
+
+    // OIDC fields — null khi login bằng form/JWT hoặc non-OIDC provider
+    private OidcIdToken idToken;
+    private OidcUserInfo userInfo;
 
     private UserPrincipal(Long id, String email, String password,
                           boolean enabled,
@@ -97,5 +104,29 @@ public class UserPrincipal implements UserDetails, OAuth2User {
     @Override
     public Map<String, Object> getAttributes() {
         return attributes;
+    }
+
+    // ================================================================
+    // OidcUser overrides
+    // ================================================================
+
+    @Override
+    public Map<String, Object> getClaims() {
+        return attributes;
+    }
+
+    @Override
+    public OidcUserInfo getUserInfo() {
+        return userInfo;
+    }
+
+    @Override
+    public OidcIdToken getIdToken() {
+        return idToken;
+    }
+
+    public void setOidcInfo(OidcIdToken idToken, OidcUserInfo userInfo) {
+        this.idToken = idToken;
+        this.userInfo = userInfo;
     }
 }

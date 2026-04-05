@@ -55,8 +55,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:noreply@localhost}
+    password: ${MAIL_PASSWORD:dummy}
     properties:
       mail:
         smtp:
@@ -74,16 +74,16 @@ spring:
       client:
         registration:
           google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-id: ${GOOGLE_CLIENT_ID:dummy}
+            client-secret: ${GOOGLE_CLIENT_SECRET:dummy}
             scope:
               - openid
               - profile
               - email
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
           github:
-            client-id: ${GITHUB_CLIENT_ID}
-            client-secret: ${GITHUB_CLIENT_SECRET}
+            client-id: ${GITHUB_CLIENT_ID:dummy}
+            client-secret: ${GITHUB_CLIENT_SECRET:dummy}
             scope:
               - user:email
               - read:user
@@ -111,6 +111,13 @@ app:
     token-expiration: 900000 # 15 phút (ms)
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+# ============================================================
+# GEMINI AI — Google Generative AI
+# Lấy key tại: https://aistudio.google.com/app/apikey
+# ============================================================
+gemini:
+  api-key: ${GEMINI_API_KEY:}
 
 # ============================================================
 # LOGGING

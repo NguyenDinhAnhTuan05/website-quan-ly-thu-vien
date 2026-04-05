@@ -69,6 +69,16 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarUploaded = async (url) => {
+    setAvatarUrl(url);
+    try {
+      const updated = await userApi.updateProfile({ username: user.username, avatarUrl: url });
+      storeUpdateProfile(updated);
+    } catch {
+      // Will be saved when user clicks "Lưu thay đổi"
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toast message={toast?.msg} type={toast?.type} />
@@ -77,7 +87,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-4">
-            <ProfileSidebar user={user} />
+            <ProfileSidebar user={user} onAvatarUploaded={handleAvatarUploaded} showToast={showToast} />
           </div>
 
           {/* Right Content */}

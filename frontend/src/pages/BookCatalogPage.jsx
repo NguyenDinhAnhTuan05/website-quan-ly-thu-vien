@@ -18,25 +18,27 @@ export default function BookCatalogPage() {
   const [borrowingId, setBorrowingId] = useState(null);
   const { toast, showToast } = useToast();
 
-  const [filters, setFilters] = useState({ 
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState(() => ({ 
     search: "", 
-    categoryId: "", 
+    categoryId: searchParams.get("categoryId") || "", 
     sortBy: "publishedDate", 
     sortDir: "desc" 
-  });
+  }));
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 12;
 
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
-  // Read categoryId from URL query param (e.g., /book?categoryId=5)
+  // Sync categoryId from URL query param (e.g., /book?categoryId=5)
   useEffect(() => {
-    const catId = searchParams.get("categoryId");
-    if (catId) {
-      setFilters((prev) => ({ ...prev, categoryId: catId }));
-    }
+    const catId = searchParams.get("categoryId") || "";
+    setFilters((prev) => {
+      if (prev.categoryId === catId) return prev;
+      return { ...prev, categoryId: catId };
+    });
+    setCurrentPage(0);
   }, [searchParams]);
 
   const fetchBooks = useCallback(async () => {
@@ -57,8 +59,8 @@ export default function BookCatalogPage() {
         setTotalPages(res.totalPages);
         setTotalElements(res.totalElements);
       }
-    } catch (err) {
-      console.error("Lỗi tải danh sách sách:", err);
+    } catch {
+      // Error handled silently
     } finally {
       setIsLoading(false);
     }

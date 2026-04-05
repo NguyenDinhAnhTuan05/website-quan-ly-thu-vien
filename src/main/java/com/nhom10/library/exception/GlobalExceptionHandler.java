@@ -122,8 +122,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(
             Exception ex, WebRequest request) {
-        // Log exception class + message ở server, stack trace chỉ ở DEBUG level
-        // → Production (level=INFO) sẽ không lưu full stack trace vào log
         log.error("Unexpected error at '{}': [{}] {}",
             request.getDescription(false), ex.getClass().getSimpleName(), ex.getMessage());
         log.debug("Full stack trace for debugging:", ex);

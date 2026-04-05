@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants.dart';
+import '../../core/error_messages.dart';
 import '../../services/auth_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoggingOut = false;
 
   void _handleLogout(BuildContext context) {
     showDialog(
@@ -18,13 +26,41 @@ class ProfileScreen extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Hủy', style: TextStyle(color: AppColors.textSecondary)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              Provider.of<AuthService>(context, listen: false).logout();
-            },
-            child: const Text('Đăng xuất'),
+          StatefulBuilder(
+            builder: (dialogCtx, setDialogState) => ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              onPressed: _isLoggingOut
+                  ? null
+                  : () async {
+                      setDialogState(() => _isLoggingOut = true);
+                      setState(() => _isLoggingOut = true);
+                      try {
+                        await Provider.of<AuthService>(context, listen: false).logout();
+                      } catch (e) {
+                        if (mounted) {
+                          Navigator.of(dialogCtx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(ErrorMessages.fromException(e)),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (mounted) setState(() => _isLoggingOut = false);
+                      }
+                    },
+              child: _isLoggingOut
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Đăng xuất'),
+            ),
           ),
         ],
       ),

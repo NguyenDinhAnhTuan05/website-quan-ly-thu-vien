@@ -16,12 +16,12 @@ import java.util.Set;
 @Slf4j
 public class ImageProxyController {
 
-    private static final Set<String> ALLOWED_HOSTS = Set.of(
-        "images-na.ssl-images-amazon.com",
-        "images.gr-assets.com",
-        "i.gr-assets.com",
-        "s.gr-assets.com",
-        "covers.openlibrary.org"
+    private static final Set<String> BLOCKED_HOSTS = Set.of(
+        "localhost",
+        "127.0.0.1",
+        "0.0.0.0",
+        "169.254.169.254",
+        "metadata.google.internal"
     );
 
     @GetMapping("/image")
@@ -30,7 +30,7 @@ public class ImageProxyController {
             String decodedUrl = new String(Base64.getDecoder().decode(url));
 
             String host = URI.create(decodedUrl).getHost();
-            if (host == null || ALLOWED_HOSTS.stream().noneMatch(host::endsWith)) {
+            if (host == null || BLOCKED_HOSTS.stream().anyMatch(b -> host.equalsIgnoreCase(b) || host.endsWith("." + b))) {
                 log.warn("Blocked proxy request to disallowed host: {}", host);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
@@ -62,6 +62,11 @@ public class ImageProxyController {
             }
 
             String contentType = conn.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                log.warn("Non-image content type '{}' for {}", contentType, decodedUrl);
+                conn.disconnect();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             try (InputStream is = conn.getInputStream();
                  ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 byte[] buf = new byte[8192];

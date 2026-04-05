@@ -9,6 +9,8 @@ import BookDetailPage from "./pages/BookDetailPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import OAuth2CallbackPage from "./pages/OAuth2CallbackPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
@@ -33,6 +35,9 @@ export default function App() {
         {/* Book Reader — full-screen, no nav/footer */}
         <Route path="/books/:id/read" element={<BookReaderPage />} />
 
+        {/* OAuth2 Callback — no layout needed */}
+        <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
+
         {/* Public Routes with Navigation & Footer */}
         <Route
           path="/*"
@@ -47,6 +52,7 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                 <Route
                   path="/dashboard"
@@ -113,6 +119,8 @@ export default function App() {
                   <Route path="/books" element={<AdminDashboardPage activeTab="books" />} />
                   <Route path="/borrows" element={<AdminDashboardPage activeTab="borrows" />} />
                   <Route path="/users" element={<AdminDashboardPage activeTab="users" />} />
+                  <Route path="/authors" element={<AdminDashboardPage activeTab="authors" />} />
+                  <Route path="/subscriptions" element={<AdminDashboardPage activeTab="subscriptions" />} />
                 </Routes>
               </AdminLayout>
             </ProtectedRoute>

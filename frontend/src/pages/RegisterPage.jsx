@@ -35,7 +35,7 @@ export default function RegisterPage() {
     if (!validate()) return;
     try {
       await register(formData.username, formData.email, formData.password);
-      navigate("/dashboard", { replace: true });
+      navigate("/profile", { replace: true });
     } catch {}
   };
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import 'home/home_screen.dart';
+import 'explore/explore_screen.dart';
+import 'ai/ai_chat_screen.dart';
 import 'history/history_screen.dart';
 import 'profile/profile_screen.dart';
 
@@ -16,6 +18,8 @@ class _MainLayoutState extends State<MainLayout> {
 
   final List<Widget> _pages = const [
     HomeScreen(),
+    ExploreScreen(),
+    AIChatScreen(),
     HistoryScreen(),
     ProfileScreen(),
   ];
@@ -36,18 +40,30 @@ class _MainLayoutState extends State<MainLayout> {
           ],
         ),
         child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.transparent,
           elevation: 0,
           currentIndex: _currentIndex,
           selectedItemColor: AppColors.secondary,
           unselectedItemColor: AppColors.textSecondary,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontSize: 11),
           onTap: (index) => setState(() => _currentIndex = index),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
               label: 'Trang chủ',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.explore_outlined),
+              activeIcon: Icon(Icons.explore),
+              label: 'Khám phá',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.auto_awesome_outlined),
+              activeIcon: Icon(Icons.auto_awesome),
+              label: 'AI',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.history_outlined),

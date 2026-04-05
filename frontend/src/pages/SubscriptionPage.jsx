@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import confetti from 'canvas-confetti';
 import subscriptionApi from '../api/subscriptionApi';
 import userApi from '../api/userApi';
 import { useAuthStore } from '../store';
@@ -7,25 +8,52 @@ import { Check, Zap, Loader2 } from 'lucide-react';
 
 const SubscriptionPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(null);
   const [successPlanId, setSuccessPlanId] = useState(null);
+  const [currentSub, setCurrentSub] = useState(null);
   const { user, updateProfile } = useAuthStore();
 
   useEffect(() => {
-    const fetchPlans = async () => {
+    const fetchData = async () => {
       try {
-        const response = await subscriptionApi.getAllPlans();
-        setPlans(response.data || response);
-      } catch (error) {
-        console.error('Lỗi khi tải các gói đăng ký:', error);
+        const [plansRes, subRes] = await Promise.all([
+          subscriptionApi.getAllPlans(),
+          user ? subscriptionApi.getMySubscription().catch(() => ({ data: null })) : Promise.resolve({ data: null }),
+        ]);
+        setPlans(plansRes.data || plansRes);
+        setCurrentSub(subRes.data || subRes || null);
+      } catch {
+        // Error handled silently
       } finally {
         setLoading(false);
       }
     };
-    fetchPlans();
-  }, []);
+    fetchData();
+  }, [user]);
+
+  // Fire confetti when a plan is successfully activated
+  useEffect(() => {
+    if (!successPlanId) return;
+    const end = Date.now() + 1500;
+    const fire = () => {
+      confetti({ particleCount: 80, spread: 80, origin: { y: 0.6 }, colors: ['#d946ef', '#f97316', '#6366f1', '#22c55e'] });
+      if (Date.now() < end) requestAnimationFrame(fire);
+    };
+    fire();
+  }, [successPlanId]);
+
+  // Detect redirect from PaymentPage with ?success=true
+  useEffect(() => {
+    if (!loading && searchParams.get('success') === 'true' && currentSub?.plan?.id) {
+      setSuccessPlanId(currentSub.plan.id);
+      setTimeout(() => setSuccessPlanId(null), 3000);
+      searchParams.delete('success');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [loading, searchParams, currentSub, setSearchParams]);
 
   const handleSubscribe = async (plan) => {
     if (!user) {
@@ -37,13 +65,14 @@ const SubscriptionPage = () => {
       if (!window.confirm('Bạn có muốn đăng ký gói miễn phí này không?')) return;
       setActivating(plan.id);
       try {
-        await subscriptionApi.activate({ userId: user.id, planId: plan.id, paymentRef: null });
+        const res = await subscriptionApi.activate({ planId: plan.id, paymentRef: null });
         const freshUser = await userApi.getMe();
         updateProfile(freshUser);
+        setCurrentSub(res.data || res);
         setSuccessPlanId(plan.id);
         setTimeout(() => setSuccessPlanId(null), 3000);
       } catch (e) {
-        alert(e.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+        alert(e.response?.data?.message || e.response?.data || 'Có lỗi xảy ra, vui lòng thử lại.');
       } finally {
         setActivating(null);
       }
@@ -72,7 +101,11 @@ const SubscriptionPage = () => {
       <div className="mt-16 grid grid-cols-1 gap-y-12 sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-3 lg:gap-x-8">
         {plans.map((plan) => {
           const isPremium = plan.name.includes('PREMIUM');
-          const isActivated = user?.membershipTier === 'PREMIUM' && plan.price > 0;
+          // Đang dùng gói trả phí → không cho chọn gói miễn phí
+          const hasPaidActiveSub = currentSub && currentSub.plan && currentSub.status === 'ACTIVE';
+          const isCurrentPlan = currentSub?.plan?.id === plan.id && currentSub?.status === 'ACTIVE';
+          const isFreePlanBlocked = plan.price <= 0 && hasPaidActiveSub && currentSub.plan.id !== plan.id;
+          const isActivated = isCurrentPlan;
           const isSucceeded = successPlanId === plan.id;
 
           return (
@@ -123,7 +156,7 @@ const SubscriptionPage = () => {
 
               <button
                 onClick={() => handleSubscribe(plan)}
-                disabled={isActivated || activating === plan.id}
+                disabled={isActivated || isFreePlanBlocked || activating === plan.id}
                 className={`mt-8 block w-full py-3 px-6 rounded-lg font-semibold text-center transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
                   isPremium
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -134,7 +167,9 @@ const SubscriptionPage = () => {
                 {isSucceeded
                   ? '✓ Kích hoạt thành công!'
                   : isActivated
-                  ? 'Đã kích hoạt'
+                  ? '✓ Đang sử dụng'
+                  : isFreePlanBlocked
+                  ? 'Bạn đang dùng gói trả phí'
                   : plan.price > 0
                   ? 'Thanh toán ngay'
                   : 'Chọn gói này'}

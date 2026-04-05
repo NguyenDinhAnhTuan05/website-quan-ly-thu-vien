@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import authApi from "../api/authApi";
+import userApi from "../api/userApi";
 
-// --- Helper: build user object t? AuthResponse c?a Spring Boot -------------
+// --- Helper: build user object từ response của Spring Boot -----------------
 const buildUser = (res) => ({
   id: res.userId ?? res.id,
   username: res.username,
@@ -12,92 +13,112 @@ const buildUser = (res) => ({
   membershipTier: res.membershipTier ?? 'BASIC',
 });
 
-const saveAuthToStorage = (res) => {
+/** Chỉ lưu token — KHÔNG lưu user data vào localStorage */
+const saveTokensToStorage = (res) => {
   localStorage.setItem("accessToken", res.accessToken);
   if (res.refreshToken) localStorage.setItem("refreshToken", res.refreshToken);
-  localStorage.setItem("user", JSON.stringify(buildUser(res)));
 };
 
 const clearAuthStorage = () => {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
-  localStorage.removeItem("user");
-};
-
-// -- Đọc trạng thái auth từ localStorage ngay khi khởi tạo store (đồng bộ) --
-const getInitialAuth = () => {
-  try {
-    const token = localStorage.getItem("accessToken");
-    const userStr = localStorage.getItem("user");
-    if (token && userStr) {
-      return { user: JSON.parse(userStr), isAuthenticated: true };
-    }
-  } catch {
-    clearAuthStorage();
-  }
-  return { user: null, isAuthenticated: false };
 };
 
 // --- Auth Store -------------------------------------------------------------
-export const useAuthStore = create((set) => ({
-  ...getInitialAuth(),
+// User data CHỈ tồn tại trong memory (Zustand).
+// Mỗi lần app load → fetch từ server qua GET /api/users/me.
+// -------------------------------------------------------------------------
+export const useAuthStore = create((set, get) => ({
+  user: null,
+  isAuthenticated: !!localStorage.getItem("accessToken"),
+  isAuthVerified: !localStorage.getItem("accessToken"), // nếu không có token → đã verified (anonymous)
   isLoading: false,
   error: null,
 
-  /** Đăng ký lắng nghe sự kiện auth:logout (gọi 1 lần khi app mount) */
-  initAuth: () => {
+  /**
+   * Khởi tạo auth: lắng nghe logout event + fetch user từ server.
+   * Gọi 1 lần khi app mount. Nếu có token → gọi GET /api/users/me
+   * để lấy user data từ database. KHÔNG đọc user từ localStorage.
+   */
+  initAuth: async () => {
+    // Lắng nghe sự kiện auth:logout từ axiosClient
     window.addEventListener("auth:logout", () => {
-      set({ user: null, isAuthenticated: false });
+      clearAuthStorage();
+      set({ user: null, isAuthenticated: false, isAuthVerified: true });
     });
+
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      set({ user: null, isAuthenticated: false, isAuthVerified: true });
+      return;
+    }
+
+    // Có token → fetch user data thật từ server
+    try {
+      const serverUser = await userApi.getMe();
+      set({ user: buildUser(serverUser), isAuthenticated: true, isAuthVerified: true });
+    } catch {
+      // Token không hợp lệ hoặc hết hạn → đăng xuất
+      clearAuthStorage();
+      set({ user: null, isAuthenticated: false, isAuthVerified: true });
+    }
   },
 
-  /** �ang nh?p */
+  /** Đồng bộ user data từ server (gọi sau khi refresh token) */
+  syncUserFromServer: async () => {
+    try {
+      const serverUser = await userApi.getMe();
+      set({ user: buildUser(serverUser), isAuthenticated: true });
+    } catch {
+      // Nếu fetch thất bại, giữ nguyên state hiện tại
+    }
+  },
+
+  /** Đăng nhập */
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      // axiosClient d� strip response.data ? res l� AuthResponse tr?c ti?p
       const res = await authApi.login({ email, password });
-      saveAuthToStorage(res);
-      set({ user: buildUser(res), isAuthenticated: true, isLoading: false, error: null });
+      saveTokensToStorage(res);
+      set({ user: buildUser(res), isAuthenticated: true, isAuthVerified: true, isLoading: false, error: null });
       return res;
     } catch (err) {
       const msg =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        "�ang nh?p th?t b?i. Ki?m tra email/m?t kh?u.";
+        "Đăng nhập thất bại. Kiểm tra email/mật khẩu.";
       set({ error: msg, isLoading: false });
       throw new Error(msg);
     }
   },
 
-  /** �ang k� */
+  /** Đăng ký */
   register: async (username, email, password) => {
     set({ isLoading: true, error: null });
     try {
       const res = await authApi.register({ username, email, password });
-      saveAuthToStorage(res);
-      set({ user: buildUser(res), isAuthenticated: true, isLoading: false, error: null });
+      saveTokensToStorage(res);
+      set({ user: buildUser(res), isAuthenticated: true, isAuthVerified: true, isLoading: false, error: null });
       return res;
     } catch (err) {
       const msg =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        "�ang k� th?t b?i. Vui l�ng th? l?i.";
+        "Đăng ký thất bại. Vui lòng thử lại.";
       set({ error: msg, isLoading: false });
       throw new Error(msg);
     }
   },
 
-  /** �ang xu?t */
+  /** Đăng xuất */
   logout: () => {
     clearAuthStorage();
-    set({ user: null, isAuthenticated: false, error: null });
+    set({ user: null, isAuthenticated: false, isAuthVerified: true, error: null });
   },
+
   /** Cập nhật thông tin hồ sơ sau khi PUT /api/users/me thành công */
   updateProfile: (updatedUser) => {
-    const merged = buildUser(updatedUser);
-    localStorage.setItem("user", JSON.stringify(merged));
-    set({ user: merged });
+    set({ user: buildUser(updatedUser) });
   },
   clearError: () => set({ error: null }),
 }));

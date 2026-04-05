@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 public class UserSubscriptionResponse {
 
     private Long id;
+    private Long userId;
+    private String userEmail;
+    private String userName;
     private SubscriptionPlanResponse plan;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
@@ -22,6 +25,9 @@ public class UserSubscriptionResponse {
     public static UserSubscriptionResponse from(UserSubscription sub) {
         return UserSubscriptionResponse.builder()
             .id(sub.getId())
+            .userId(sub.getUser() != null ? sub.getUser().getId() : null)
+            .userEmail(sub.getUser() != null ? sub.getUser().getEmail() : null)
+            .userName(sub.getUser() != null ? sub.getUser().getUsername() : null)
             .plan(SubscriptionPlanResponse.from(sub.getPlan()))
             .startDate(sub.getStartDate())
             .endDate(sub.getEndDate())

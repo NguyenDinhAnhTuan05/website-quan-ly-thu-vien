@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants.dart';
+import '../../core/error_messages.dart';
 import '../../services/api_service.dart';
 
 class BookDetailScreen extends StatefulWidget {
   final Map<String, dynamic> book;
+  final String heroTag;
 
-  const BookDetailScreen({Key? key, required this.book}) : super(key: key);
+  const BookDetailScreen({Key? key, required this.book, this.heroTag = ''}) : super(key: key);
 
   @override
   State<BookDetailScreen> createState() => _BookDetailScreenState();
@@ -32,13 +35,13 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể mượn sách. Vui lòng thử lại!')),
+          SnackBar(content: Text(ErrorMessages.fromStatusCode(response.statusCode))),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lỗi kết nối.')),
+        SnackBar(content: Text(ErrorMessages.fromException(e))),
       );
     } finally {
       if (mounted) {
@@ -65,16 +68,30 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: thumbnailUrl != null
-                    ? Image.network(
-                        thumbnailUrl,
-                        height: 250,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholder(),
-                      )
-                    : _buildPlaceholder(),
+              child: Hero(
+                tag: widget.heroTag,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: thumbnailUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: thumbnailUrl,
+                          height: 250,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            height: 250,
+                            width: 180,
+                            color: Colors.grey[800],
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => _buildPlaceholder(),
+                        )
+                      : _buildPlaceholder(),
+                ),
               ),
             ),
             const SizedBox(height: 24),

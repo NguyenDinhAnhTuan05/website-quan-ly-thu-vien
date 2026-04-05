@@ -46,6 +46,8 @@ public class BorrowService {
     private static final int MAX_ACTIVE_BORROWS = 3;
     /** Điểm thưởng khi trả sách đúng hạn */
     private static final int POINTS_ON_RETURN = 10;
+    /** Điểm phạt khi trả sách trễ (OVERDUE) — điểm không thể xuống dưới 0 */
+    private static final int POINTS_PENALTY_OVERDUE = 5;
     /** Hạn mượn mặc định: 14 ngày */
     private static final int DEFAULT_BORROW_DAYS = 14;
 
@@ -253,19 +255,31 @@ public class BorrowService {
             throw new InvalidBorrowStatusException("Phiếu đã bị hủy/từ chối, không thể xử lý trả.");
         }
 
+        boolean wasOverdue = record.getStatus() == BorrowStatus.OVERDUE;
+
         record.setStatus(BorrowStatus.RETURNED);
         record.setReturnDate(LocalDate.now());
 
         restoreBorrowedBooks(record);
 
-        // Thưởng điểm gamification khi trả sách
+        // Gamification: thưởng/phạt điểm tùy theo trả đúng hạn hay trễ
         User borrower = record.getUser();
-        borrower.setPoints(borrower.getPoints() + POINTS_ON_RETURN);
-        userRepository.save(borrower);
+        if (wasOverdue) {
+            // Trả trễ: trừ điểm phạt, không để điểm âm
+            int newPoints = Math.max(0, borrower.getPoints() - POINTS_PENALTY_OVERDUE);
+            borrower.setPoints(newPoints);
+            userRepository.save(borrower);
+            log.info("Admin {} đã nhận trả TRỄ phiếu mượn {}. User {} bị -{} điểm phạt (tổng: {})",
+                adminId, recordId, borrower.getId(), POINTS_PENALTY_OVERDUE, borrower.getPoints());
+        } else {
+            // Trả đúng hạn: cộng điểm thưởng
+            borrower.setPoints(borrower.getPoints() + POINTS_ON_RETURN);
+            userRepository.save(borrower);
+            log.info("Admin {} đã nhận trả đúng hạn phiếu mượn {}. User {} được +{} điểm (tổng: {})",
+                adminId, recordId, borrower.getId(), POINTS_ON_RETURN, borrower.getPoints());
+        }
 
         BorrowRecord savedRecord = borrowRecordRepository.save(record);
-        log.info("Admin {} đã nhận trả phiếu mượn {}. User {} được +{} điểm (tổng: {})",
-            adminId, recordId, borrower.getId(), POINTS_ON_RETURN, borrower.getPoints());
         return BorrowRecordResponse.from(savedRecord);
     }
 

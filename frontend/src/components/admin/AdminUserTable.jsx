@@ -26,6 +26,7 @@ export default function AdminUserTable({ users, userLoading, userKeyword, setUse
                 <th className="text-left p-3 font-semibold">Username</th>
                 <th className="text-left p-3 font-semibold">Email</th>
                 <th className="text-center p-3 font-semibold">Role</th>
+                <th className="text-center p-3 font-semibold">Gói đăng ký</th>
                 <th className="text-center p-3 font-semibold">Trạng thái</th>
                 <th className="text-center p-3 font-semibold">Ngày tạo</th>
                 <th className="text-right p-3 font-semibold">Hành động</th>
@@ -38,6 +39,22 @@ export default function AdminUserTable({ users, userLoading, userKeyword, setUse
                   <td className="p-3 text-gray-600">{u.email}</td>
                   <td className="p-3 text-center">
                     <span className="badge-primary">{String(u.role).replace("ROLE_", "")}</span>
+                  </td>
+                  <td className="p-3 text-center">
+                    {u.activeSubscriptionPlanName ? (
+                      <div>
+                        <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 font-semibold">
+                          {u.activeSubscriptionPlanName}
+                        </span>
+                        {u.subscriptionEndDate && (
+                          <div className="text-[10px] text-gray-400 mt-1">
+                            HSD: {new Date(u.subscriptionEndDate).toLocaleDateString("vi-VN")}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">Chưa đăng ký</span>
+                    )}
                   </td>
                   <td className="p-3 text-center">
                     <span

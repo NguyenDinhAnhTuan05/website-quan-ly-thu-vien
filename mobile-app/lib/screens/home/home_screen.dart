@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants.dart';
+import '../../core/error_messages.dart';
 import '../../services/api_service.dart';
+import '../../widgets/shimmer_loading.dart';
 import 'dart:convert';
 import 'book_detail_screen.dart';
 
@@ -32,15 +35,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (responses[0].statusCode == 200) {
         final Map<String, dynamic> body = jsonDecode(responses[0].body);
-        _books = body['data']['items'] ?? body['data'] ?? body['content'] ?? []; // Phụ thuộc vào cấu trúc trả về
+        _books = body['data']['items'] ?? body['data'] ?? body['content'] ?? [];
       }
-      
+
       if (responses[1].statusCode == 200) {
-         final Map<String, dynamic> body = jsonDecode(responses[1].body);
-         _categories = body['data'] ?? body['content'] ?? []; // Phụ thuộc vào cấu trúc trả về
+        final Map<String, dynamic> body = jsonDecode(responses[1].body);
+        _categories = body['data'] ?? body['content'] ?? [];
       }
     } catch (e) {
-      print('Fetch error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorMessages.fromException(e)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -50,33 +60,71 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Thư Viện Số'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppColors.textPrimary),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
-            onPressed: () {},
-          ),
-        ],
-      ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const ShimmerHomeLoading()
           : RefreshIndicator(
               color: AppColors.primary,
               backgroundColor: AppColors.surface,
-              onRefresh: _fetchData,
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                children: [
-                  _buildSectionHeader('Thể loại nổi bật', () {}),
-                  _buildCategories(),
-                  const SizedBox(height: 24),
-                  _buildSectionHeader('Sách phổ biến', () {}),
-                  _buildPopularBooks(),
+              onRefresh: () async {
+                setState(() => _isLoading = true);
+                await _fetchData();
+              },
+              child: CustomScrollView(
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: 140.0,
+                    floating: true,
+                    pinned: true,
+                    backgroundColor: AppColors.surface,
+                    flexibleSpace: FlexibleSpaceBar(
+                      titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                      title: const Text(
+                        'Thư Viện Số',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      background: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primary.withOpacity(0.3),
+                              AppColors.secondary.withOpacity(0.1),
+                              AppColors.surface,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.search, color: AppColors.textPrimary),
+                        onPressed: () {},
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Column(
+                        children: [
+                          _buildSectionHeader('Thể loại nổi bật', () {}),
+                          _buildCategories(),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader('Sách phổ biến', () {}),
+                          _buildPopularBooks(),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -152,12 +200,13 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: _books.length,
         itemBuilder: (context, index) {
           final book = _books[index];
+          final heroTag = 'book-cover-${book['id'] ?? index}';
           return GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BookDetailScreen(book: book),
+                  builder: (context) => BookDetailScreen(book: book, heroTag: heroTag),
                 ),
               );
             },
@@ -171,17 +220,30 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: book['thumbnail'] != null
-                        ? Image.network(
-                            book['thumbnail'],
-                            height: 200,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildPlaceholder(),
-                          )
-                        : _buildPlaceholder(),
+                  Hero(
+                    tag: heroTag,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      child: book['thumbnail'] != null
+                          ? CachedNetworkImage(
+                              imageUrl: book['thumbnail'],
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(
+                                height: 200,
+                                color: Colors.grey[800],
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) => _buildPlaceholder(),
+                            )
+                          : _buildPlaceholder(),
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(12),

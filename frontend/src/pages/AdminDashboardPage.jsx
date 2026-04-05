@@ -5,10 +5,15 @@ import AdminBookForm from "../components/admin/AdminBookForm";
 import AdminBookTable from "../components/admin/AdminBookTable";
 import AdminBorrowTable from "../components/admin/AdminBorrowTable";
 import AdminUserTable from "../components/admin/AdminUserTable";
+import AdminAuthorTable from "../components/admin/AdminAuthorTable";
+import AdminAuthorForm from "../components/admin/AdminAuthorForm";
+import AdminSubscriptionTable from "../components/admin/AdminSubscriptionTable";
+import AdminSubscriptionForm from "../components/admin/AdminSubscriptionForm";
 import adminApi from "../api/adminApi";
 import borrowApi from "../api/borrowApi";
 import categoryApi from "../api/categoryApi";
 import authorApi from "../api/authorApi";
+import subscriptionApi from "../api/subscriptionApi";
 
 export default function AdminDashboardPage({ activeTab: initialTab = "books" }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -34,6 +39,24 @@ export default function AdminDashboardPage({ activeTab: initialTab = "books" }) 
     title: "", isbn: "", description: "", coverUrl: "", quantity: 1,
     available: true, publishedDate: "", categoryIds: [], authorIds: [],
   });
+
+  // ─── QUẢN LÝ TÁC GIẢ ────────────────────────────────────────────
+  const [authorList, setAuthorList] = useState([]);
+  const [authorKeyword, setAuthorKeyword] = useState("");
+  const [authorLoading, setAuthorLoading] = useState(false);
+  const [showAuthorForm, setShowAuthorForm] = useState(false);
+  const [editingAuthor, setEditingAuthor] = useState(null);
+  const [authorForm, setAuthorForm] = useState({ name: "", bio: "", avatarUrl: "" });
+
+  // ─── QUẢN LÝ GÓI THÀNH VIÊN ─────────────────────────────────────
+  const [plans, setPlans] = useState([]);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [showPlanForm, setShowPlanForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [planForm, setPlanForm] = useState({
+    name: "", description: "", price: 0, durationDays: 30, maxBorrowBooks: 3,
+  });
+
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -73,9 +96,36 @@ export default function AdminDashboardPage({ activeTab: initialTab = "books" }) 
     }
   }, [userKeyword]);
 
+  const fetchAuthors = useCallback(async () => {
+    setAuthorLoading(true);
+    try {
+      const res = await authorApi.getAll({ page: 0, size: 50 });
+      let list = res.content || [];
+      if (authorKeyword) {
+        const kw = authorKeyword.toLowerCase();
+        list = list.filter((a) => a.name?.toLowerCase().includes(kw));
+      }
+      setAuthorList(list);
+    } catch {} finally {
+      setAuthorLoading(false);
+    }
+  }, [authorKeyword]);
+
+  const fetchPlans = useCallback(async () => {
+    setPlanLoading(true);
+    try {
+      const res = await subscriptionApi.getAllPlans();
+      setPlans(Array.isArray(res) ? res : []);
+    } catch {} finally {
+      setPlanLoading(false);
+    }
+  }, []);
+
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
   useEffect(() => { if (activeTab === "borrows") fetchBorrows(); }, [fetchBorrows, activeTab]);
   useEffect(() => { if (activeTab === "users") fetchUsers(); }, [fetchUsers, activeTab]);
+  useEffect(() => { if (activeTab === "authors") fetchAuthors(); }, [fetchAuthors, activeTab]);
+  useEffect(() => { if (activeTab === "subscriptions") fetchPlans(); }, [fetchPlans, activeTab]);
   useEffect(() => {
     categoryApi.getAllAsList().then(setCategories).catch(() => {});
     authorApi.getAllAsList().then(setAuthors).catch(() => {});
@@ -166,6 +216,82 @@ export default function AdminDashboardPage({ activeTab: initialTab = "books" }) 
     catch (err) { showToast(err.response?.data?.message || "Lỗi.", "error"); }
   };
 
+  // ─── TÁC GIẢ HANDLERS ──────────────────────────────────────────
+  const openAuthorForm = (author = null) => {
+    if (author) {
+      setEditingAuthor(author);
+      setAuthorForm({ name: author.name || "", bio: author.bio || "", avatarUrl: author.avatarUrl || "" });
+    } else {
+      setEditingAuthor(null);
+      setAuthorForm({ name: "", bio: "", avatarUrl: "" });
+    }
+    setShowAuthorForm(true);
+  };
+
+  const handleAuthorSubmit = async (e) => {
+    e.preventDefault();
+    if (!authorForm.name.trim()) { showToast("Tên tác giả không được để trống", "error"); return; }
+    try {
+      if (editingAuthor) {
+        await authorApi.update(editingAuthor.id, authorForm);
+        showToast("Cập nhật tác giả thành công!");
+      } else {
+        await authorApi.create(authorForm);
+        showToast("Thêm tác giả thành công!");
+      }
+      setShowAuthorForm(false);
+      fetchAuthors();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Lỗi khi lưu tác giả.", "error");
+    }
+  };
+
+  const handleDeleteAuthor = async (id) => {
+    if (!window.confirm("Xóa tác giả này?")) return;
+    try { await authorApi.delete(id); showToast("Đã xóa tác giả."); fetchAuthors(); }
+    catch (err) { showToast(err.response?.data?.message || "Không thể xóa.", "error"); }
+  };
+
+  // ─── GÓI THÀNH VIÊN HANDLERS ────────────────────────────────────
+  const openPlanForm = (plan = null) => {
+    if (plan) {
+      setEditingPlan(plan);
+      setPlanForm({
+        name: plan.name || "", description: plan.description || "",
+        price: plan.price || 0, durationDays: plan.durationDays || 30,
+        maxBorrowBooks: plan.maxBorrowBooks || 3,
+      });
+    } else {
+      setEditingPlan(null);
+      setPlanForm({ name: "", description: "", price: 0, durationDays: 30, maxBorrowBooks: 3 });
+    }
+    setShowPlanForm(true);
+  };
+
+  const handlePlanSubmit = async (e) => {
+    e.preventDefault();
+    if (!planForm.name.trim()) { showToast("Tên gói không được để trống", "error"); return; }
+    try {
+      if (editingPlan) {
+        await subscriptionApi.updatePlan(editingPlan.id, planForm);
+        showToast("Cập nhật gói thành công!");
+      } else {
+        await subscriptionApi.createPlan(planForm);
+        showToast("Thêm gói thành công!");
+      }
+      setShowPlanForm(false);
+      fetchPlans();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Lỗi khi lưu gói.", "error");
+    }
+  };
+
+  const handleDeletePlan = async (id) => {
+    if (!window.confirm("Xóa gói thành viên này?")) return;
+    try { await subscriptionApi.deletePlan(id); showToast("Đã xóa gói."); fetchPlans(); }
+    catch (err) { showToast(err.response?.data?.message || "Không thể xóa.", "error"); }
+  };
+
   return (
     <div>
       <Toast message={toast?.msg} type={toast?.type} />
@@ -232,6 +358,54 @@ export default function AdminDashboardPage({ activeTab: initialTab = "books" }) 
           onToggle={handleToggleUser}
           onDelete={handleDeleteUser}
         />
+      )}
+
+      {activeTab === "authors" && (
+        <div>
+          {showAuthorForm && (
+            <AdminAuthorForm
+              editingAuthor={editingAuthor}
+              authorForm={authorForm}
+              setAuthorForm={setAuthorForm}
+              onSubmit={handleAuthorSubmit}
+              onClose={() => setShowAuthorForm(false)}
+            />
+          )}
+
+          <AdminAuthorTable
+            authors={authorList}
+            authorLoading={authorLoading}
+            authorKeyword={authorKeyword}
+            setAuthorKeyword={setAuthorKeyword}
+            onRefresh={fetchAuthors}
+            onEdit={openAuthorForm}
+            onDelete={handleDeleteAuthor}
+            onAdd={() => openAuthorForm()}
+          />
+        </div>
+      )}
+
+      {activeTab === "subscriptions" && (
+        <div>
+          {showPlanForm && (
+            <AdminSubscriptionForm
+              editingPlan={editingPlan}
+              planForm={planForm}
+              setPlanForm={setPlanForm}
+              onSubmit={handlePlanSubmit}
+              onClose={() => setShowPlanForm(false)}
+            />
+          )}
+
+          <AdminSubscriptionTable
+            plans={plans}
+            planLoading={planLoading}
+            onEdit={openPlanForm}
+            onDelete={handleDeletePlan}
+            onAdd={() => openPlanForm()}
+            onRefresh={fetchPlans}
+          />
+        </div>
       )}
     </div>
   );

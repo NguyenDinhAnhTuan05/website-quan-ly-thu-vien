@@ -106,10 +106,11 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
         Arrays.stream(request.getCookies())
             .filter(c -> c.getName().equals(name))
             .forEach(c -> {
-                c.setValue("");
-                c.setPath("/");
-                c.setMaxAge(0);
-                response.addCookie(c);
+                // Tạo cookie mới để xóa, KHÔNG mutate cookie gốc trong request
+                Cookie deleteCookie = new Cookie(name, "");
+                deleteCookie.setPath("/");
+                deleteCookie.setMaxAge(0);
+                response.addCookie(deleteCookie);
             });
     }
 

@@ -69,6 +69,13 @@ axiosClient.interceptors.response.use(
             axiosClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
             processQueue(null, newAccessToken);
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+            // Đồng bộ user data từ server sau khi refresh token thành công
+            // Import động để tránh circular dependency
+            import('../store/index').then(({ useAuthStore }) => {
+              useAuthStore.getState().syncUserFromServer();
+            });
+
             return axiosClient(originalRequest);
           }
         } catch (refreshError) {
@@ -81,7 +88,6 @@ axiosClient.interceptors.response.use(
       // Refresh thất bại hoặc không có refreshToken → đăng xuất
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
       window.dispatchEvent(new Event('auth:logout'));
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

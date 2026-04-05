@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import '../../core/error_messages.dart';
 import '../../services/api_service.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -30,7 +31,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
         _historyItems = body['data'] ?? body['content'] ?? [];
       }
     } catch (e) {
-      print('Fetch history error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ErrorMessages.fromException(e)),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

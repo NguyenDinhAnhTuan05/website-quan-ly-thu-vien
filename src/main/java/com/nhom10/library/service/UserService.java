@@ -4,11 +4,14 @@ import com.nhom10.library.dto.request.ChangePasswordRequest;
 import com.nhom10.library.dto.request.UpdateProfileRequest;
 import com.nhom10.library.dto.response.UserResponse;
 import com.nhom10.library.entity.User;
+import com.nhom10.library.entity.UserSubscription;
 import com.nhom10.library.entity.enums.Role;
+import com.nhom10.library.entity.enums.SubscriptionStatus;
 import com.nhom10.library.exception.BadRequestException;
 import com.nhom10.library.exception.ForbiddenException;
 import com.nhom10.library.exception.ResourceNotFoundException;
 import com.nhom10.library.repository.UserRepository;
+import com.nhom10.library.repository.UserSubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -17,22 +20,28 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserSubscriptionRepository userSubscriptionRepository;
     private final PasswordEncoder passwordEncoder;
 
     // ================================================================
     // READ — Dành cho Admin quản lý
     // ================================================================
 
-    /** Lấy danh sách tất cả users (phân trang) */
+    /** Lấy danh sách tất cả users (phân trang) — bao gồm thông tin gói đăng ký */
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable).map(UserResponse::from);
+        Page<User> userPage = userRepository.findAll(pageable);
+        return enrichWithSubscriptions(userPage);
     }
 
     /** Lấy chi tiết 1 user theo ID */
@@ -173,8 +182,8 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserResponse> searchUsers(String keyword, Pageable pageable) {
-        return userRepository.searchByEmailOrUsername(keyword, pageable)
-            .map(UserResponse::from);
+        Page<User> userPage = userRepository.searchByEmailOrUsername(keyword, pageable);
+        return enrichWithSubscriptions(userPage);
     }
 
     // ================================================================
@@ -236,6 +245,24 @@ public class UserService {
     // ================================================================
     // PRIVATE HELPER
     // ================================================================
+
+    /** Batch-enrich user page with active subscription info */
+    private Page<UserResponse> enrichWithSubscriptions(Page<User> userPage) {
+        List<Long> userIds = userPage.getContent().stream().map(User::getId).collect(Collectors.toList());
+        if (userIds.isEmpty()) {
+            return userPage.map(UserResponse::from);
+        }
+        Map<Long, UserSubscription> activeSubMap = userSubscriptionRepository
+                .findByUserIdInAndStatus(userIds, SubscriptionStatus.ACTIVE)
+                .stream()
+                .collect(Collectors.toMap(
+                        sub -> sub.getUser().getId(),
+                        sub -> sub,
+                        (a, b) -> a.getEndDate().isAfter(b.getEndDate()) ? a : b // lấy gói kết thúc muộn nhất
+                ));
+        return userPage.map(user -> UserResponse.fromWithSubscription(user, activeSubMap.get(user.getId())));
+    }
+
     private User findById(Long id) {
         return userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));

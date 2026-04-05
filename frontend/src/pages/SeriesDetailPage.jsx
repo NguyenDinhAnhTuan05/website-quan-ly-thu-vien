@@ -24,8 +24,7 @@ export default function SeriesDetailPage() {
       try {
         const res = await seriesApi.getSeriesById(id);
         setSeries(res);
-      } catch (err) {
-        console.error("Lỗi tải bộ sách:", err);
+      } catch {
         showToast("Không tìm thấy bộ sách.", "error");
       } finally {
         setIsLoading(false);

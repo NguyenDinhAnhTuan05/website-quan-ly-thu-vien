@@ -1,5 +1,6 @@
 package com.nhom10.library.controller;
 
+import com.nhom10.library.dto.response.BookResponse;
 import com.nhom10.library.entity.Book;
 import com.nhom10.library.service.BookImportService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class BookAdminImportController {
     public ResponseEntity<?> importByIsbn(@PathVariable String isbn) {
         Book importedBook = bookImportService.importBookByIsbn(isbn);
         if (importedBook != null) {
-            return ResponseEntity.ok(importedBook);
+            return ResponseEntity.ok(BookResponse.from(importedBook));
         }
         return ResponseEntity.badRequest().body("Không tìm thấy thông tin sách với mã ISBN này.");
     }

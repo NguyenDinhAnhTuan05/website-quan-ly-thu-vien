@@ -1,6 +1,39 @@
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
-export default function ProfileSidebar({ user }) {
+export default function ProfileSidebar({ user, onAvatarUploaded, showToast }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast?.("Vui lòng chọn file ảnh", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast?.("File không được vượt quá 5MB", "error");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { default: uploadApi } = await import("../../api/uploadApi");
+      const result = await uploadApi.uploadAvatar(file);
+      onAvatarUploaded?.(result.url);
+      showToast?.("Cập nhật ảnh đại diện thành công!");
+    } catch (err) {
+      showToast?.(err.response?.data?.error || "Upload thất bại", "error");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <div className="sticky top-24">
       <div className="relative">
@@ -11,7 +44,8 @@ export default function ProfileSidebar({ user }) {
         <div className="relative bg-white rounded-3xl p-8 shadow-lg border-2 border-gray-100">
           {/* Avatar Section */}
           <div className="flex flex-col items-center mb-6">
-            <div className="relative mb-4">
+            <div className="relative mb-4 group cursor-pointer" onClick={handleAvatarClick}>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500 via-accent-500 to-primary-500 animate-spin" style={{ animationDuration: "3s" }}></div>
               <div className="relative w-32 h-32 rounded-full bg-white p-1.5">
                 <div className="w-full h-full rounded-full bg-gradient-to-br from-primary-100 to-accent-100 flex items-center justify-center overflow-hidden">
@@ -21,6 +55,20 @@ export default function ProfileSidebar({ user }) {
                     <span className="text-5xl font-black bg-gradient-to-br from-primary-600 to-accent-600 bg-clip-text text-transparent">
                       {user?.username?.[0]?.toUpperCase() || "?"}
                     </span>
+                  )}
+                </div>
+                {/* Camera overlay on hover */}
+                <div className="absolute inset-1.5 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {uploading ? (
+                    <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                   )}
                 </div>
               </div>

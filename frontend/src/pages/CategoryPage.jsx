@@ -21,8 +21,8 @@ export default function CategoryPage() {
         ]);
         setCategories(Array.isArray(catRes) ? catRes : catRes?.content || []);
         setSeriesList(Array.isArray(seriesRes) ? seriesRes : []);
-      } catch (err) {
-        console.error("Lỗi tải dữ liệu:", err);
+      } catch {
+        // Error handled silently
       } finally {
         setIsLoading(false);
       }

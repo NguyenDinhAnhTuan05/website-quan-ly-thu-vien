@@ -1,1 +1,0 @@
-import{a as e}from"./index-Dg9ekBC2.js";const n={uploadAvatar:async t=>{const a=new FormData;return a.append("file",t),await e.post("/upload/avatar",a,{headers:{"Content-Type":void 0}})}};export{n as default};

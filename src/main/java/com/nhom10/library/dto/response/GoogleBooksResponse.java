@@ -30,6 +30,8 @@ public class GoogleBooksResponse {
         private String description;
         private List<IndustryIdentifier> industryIdentifiers;
         private Integer pageCount;
+        private String language;
+        private String previewLink;
         private List<String> categories;
         private ImageLinks imageLinks;
         private String publishedDate;

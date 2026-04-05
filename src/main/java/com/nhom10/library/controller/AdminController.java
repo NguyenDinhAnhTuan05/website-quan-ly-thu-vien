@@ -3,6 +3,7 @@ package com.nhom10.library.controller;
 import com.nhom10.library.dto.request.AdminBookRequest;
 import com.nhom10.library.dto.response.BookResponse;
 import com.nhom10.library.service.AdminService;
+import com.nhom10.library.service.BookContentGeneratorService;
 import com.nhom10.library.service.GoogleBooksCrawlerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final GoogleBooksCrawlerService googleBooksCrawlerService;
+    private final BookContentGeneratorService bookContentGeneratorService;
 
     /** Lấy danh sách sách cho Admin (phân trang, bao gồm cả sách bị tắt) */
     @GetMapping
@@ -78,6 +80,54 @@ public class AdminController {
             "message", "Cào dữ liệu thành công!",
             "keyword", keyword,
             "added_books_count", addedCount
+        ));
+    }
+
+    /**
+     * Cập nhật avatar cho tất cả authors chưa có avatar.
+     * POST /api/admin/books/refresh-authors
+     */
+    @PostMapping("/refresh-authors")
+    public ResponseEntity<java.util.Map<String, Object>> refreshAuthorAvatars() {
+        int updated = googleBooksCrawlerService.refreshMissingAuthorAvatars();
+        return ResponseEntity.ok(java.util.Map.of(
+            "message", "Cập nhật avatar tác giả thành công!",
+            "updated_count", updated
+        ));
+    }
+
+    /**
+     * Cập nhật cover, series, metadata cho tất cả sách chưa có cover hoặc cover cũ.
+     * POST /api/admin/books/refresh-covers
+     */
+    @PostMapping("/refresh-covers")
+    public ResponseEntity<java.util.Map<String, Object>> refreshBookCovers() {
+        java.util.Map<String, Integer> result = googleBooksCrawlerService.refreshExistingBooks();
+        return ResponseEntity.ok(java.util.Map.of(
+            "message", "Cập nhật sách thành công!",
+            "cover_updated", result.get("cover_updated"),
+            "series_updated", result.get("series_updated"),
+            "metadata_updated", result.get("metadata_updated")
+        ));
+    }
+
+    /** Sinh nội dung AI cho TẤT CẢ sách chưa có content */
+    @PostMapping("/generate-content")
+    public ResponseEntity<java.util.Map<String, Object>> generateAllContent() {
+        int updated = bookContentGeneratorService.generateContentForAllBooks();
+        return ResponseEntity.ok(java.util.Map.of(
+            "message", "Sinh nội dung sách bằng AI thành công!",
+            "updated_count", updated
+        ));
+    }
+
+    /** Sinh nội dung AI cho MỘT sách cụ thể */
+    @PostMapping("/{id}/generate-content")
+    public ResponseEntity<java.util.Map<String, Object>> generateContentForBook(@PathVariable Long id) {
+        bookContentGeneratorService.generateAndSaveContent(id);
+        return ResponseEntity.ok(java.util.Map.of(
+            "message", "Sinh nội dung thành công!",
+            "book_id", id
         ));
     }
 }

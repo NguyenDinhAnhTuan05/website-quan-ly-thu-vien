@@ -103,10 +103,11 @@ public interface BookRepository extends JpaRepository<Book, Long>,
      * Phục vụ tính năng AI Assistant (RAG).
      */
     @Query("""
-        SELECT b FROM Book b
+        SELECT DISTINCT b FROM Book b LEFT JOIN b.authors a
         WHERE b.deleted = false AND b.available = true
           AND (LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-               OR LOWER(b.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
+               OR LOWER(b.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
         ORDER BY b.availableQuantity DESC
     """)
     List<Book> findTop10ByKeyword(@Param("keyword") String keyword, org.springframework.data.domain.Pageable pageable);

@@ -67,7 +67,6 @@ export default function PaymentPage() {
     try {
       await paymentApi.verifySePayTransaction(paymentData.amount, paymentData.orderCode);
       await subscriptionApi.activate({
-        userId: paymentData.userId,
         planId: paymentData.planId,
         paymentRef: paymentData.orderCode,
       });

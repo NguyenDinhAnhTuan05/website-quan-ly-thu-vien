@@ -28,8 +28,8 @@ export default function HomePage() {
         ]);
         if (newest?.content) setFeaturedBooks(newest.content);
         if (Array.isArray(popular)) setPopularBooks(popular.slice(0, 4));
-      } catch (err) {
-        console.error("Lỗi tải sách:", err);
+      } catch {
+        // Error handled silently
       } finally {
         setIsLoading(false);
       }

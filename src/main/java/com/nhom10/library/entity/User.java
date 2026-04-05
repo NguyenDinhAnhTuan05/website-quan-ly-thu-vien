@@ -92,7 +92,7 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "membership_tier", nullable = false, length = 20)
     @Builder.Default
-    private MembershipTier membershipTier = MembershipTier.BASIC;
+    private MembershipTier membershipTier = MembershipTier.BRONZE;
 
     // ================================================================
     // RELATIONSHIPS — tất cả LAZY để tránh N+1

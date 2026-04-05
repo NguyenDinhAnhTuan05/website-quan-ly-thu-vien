@@ -1,8 +1,10 @@
 package com.nhom10.library.controller;
 
+import com.nhom10.library.security.UserPrincipal;
 import com.nhom10.library.service.AiAssistantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,13 +24,15 @@ public class AiAssistantController {
      * Ví dụ request body: {"message": "Tôi đang buồn, hãy gợi ý cho tôi 2 cuốn sách chữa lành!"}
      */
     @PostMapping("/chat")
-    public ResponseEntity<?> chatWithAi(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> chatWithAi(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody Map<String, String> payload) {
         String userMessage = payload.get("message");
         if (userMessage == null || userMessage.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Vui lòng nhập câu hỏi cho AI."));
         }
 
-        String aiResponse = aiAssistantService.getRecommendationFromGemini(userMessage);
+        String aiResponse = aiAssistantService.getRecommendationFromGemini(principal.getId(), userMessage);
 
         return ResponseEntity.ok(Map.of(
             "status", "success",

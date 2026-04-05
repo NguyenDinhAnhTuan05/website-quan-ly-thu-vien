@@ -41,8 +41,7 @@ export default function ProfileInfoForm({
     try {
       const { default: uploadApi } = await import("../../api/uploadApi");
       const result = await uploadApi.uploadAvatar(avatarFile);
-      const fullUrl = `${window.location.origin}${result.url}`;
-      setAvatarUrl(fullUrl);
+      setAvatarUrl(result.url);
       setAvatarFile(null);
       showToast("Upload ảnh thành công!");
     } catch (err) {
@@ -99,7 +98,7 @@ export default function ProfileInfoForm({
         </div>
 
         {/* Avatar Upload */}
-        <div>
+        {/* <div>
           <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Ảnh đại diện</label>
           <div className="space-y-4">
             <div
@@ -144,7 +143,7 @@ export default function ProfileInfoForm({
             )}
           </div>
           <input type="hidden" value={avatarUrl} />
-        </div>
+        </div> */}
 
         {/* Submit */}
         <div className="flex justify-end pt-4">

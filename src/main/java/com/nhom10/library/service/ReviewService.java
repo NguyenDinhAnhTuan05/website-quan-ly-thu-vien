@@ -14,6 +14,9 @@ import com.nhom10.library.repository.BorrowRecordRepository;
 import com.nhom10.library.repository.ReviewRepository;
 import com.nhom10.library.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import com.nhom10.library.event.GamificationEvent;
+import com.nhom10.library.entity.enums.PointActionType;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ public class ReviewService {
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
     private final BorrowRecordRepository borrowRecordRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public Page<ReviewResponse> getReviewsByBookId(Long bookId, Pageable pageable) {
@@ -65,6 +69,7 @@ public class ReviewService {
         }
 
         // Nếu đã có đánh giá, cập nhật; nếu chưa, tạo mới
+        boolean isNewReview = !reviewRepository.findByUserIdAndBookId(userId, bookId).isPresent();
         Review review = reviewRepository.findByUserIdAndBookId(userId, bookId)
             .orElse(Review.builder()
                 .user(user)
@@ -75,6 +80,13 @@ public class ReviewService {
         review.setComment(request.getComment());
 
         Review savedReview = reviewRepository.save(review);
+
+        // Bắn sự kiện Gamification nếu là review mới
+        if (isNewReview) {
+            eventPublisher.publishEvent(new GamificationEvent(this, user, 
+                PointActionType.REVIEW_BOOK, bookId.toString(), "Đánh giá sách: " + book.getTitle()));
+        }
+
         return ReviewResponse.from(savedReview);
     }
 
