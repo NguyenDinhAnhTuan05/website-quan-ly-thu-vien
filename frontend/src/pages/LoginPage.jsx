@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/index";
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = import.meta.env.DEV ? "http://localhost:8080" : "";
 const REDIRECT_URI = `${window.location.origin}/oauth2/callback`;
 
 export default function LoginPage() {
