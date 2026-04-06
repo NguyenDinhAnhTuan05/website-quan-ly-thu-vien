@@ -17,7 +17,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-library_pass}
       TZ: Asia/Ho_Chi_Minh
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${MYSQL_PORT:-3307}:3306"
     volumes:
       # Persist MySQL data
       - mysql-data:/var/lib/mysql
@@ -49,15 +49,13 @@ services:
     image: redis:7
     container_name: library-redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_pass}
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
       # Persist Redis data
       - redis-data:/data
     networks:
       - library-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secure_pass}", "--no-auth-warning", "--raw", "incr", "ping"]
       timeout: 10s
       retries: 5
       interval: 10s
@@ -103,6 +101,32 @@ services:
       SERVER_PORT: "8080"
       SERVER_SERVLET_CONTEXT_PATH: /
 
+      # JWT — BẮT BUỘC, không có default, app sẽ crash nếu thiếu
+      JWT_SECRET: ${JWT_SECRET}
+
+      # CORS — danh sách origin được phép gọi API
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+
+      # Email
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+
+      # OAuth2 — Google & GitHub (để "dummy" nếu không dùng)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-dummy}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-dummy}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-dummy}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-dummy}
+
+      # Gemini AI
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+      # VNPay — return URL phải trỏ về đúng địa chỉ server
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:8080/api/payment/vnpay-return}
+
+      # MoMo — return/notify URL phải trỏ về đúng địa chỉ server
+      MOMO_RETURN_URL: ${MOMO_RETURN_URL:-http://localhost:8080/api/payment/momo-return}
+      MOMO_NOTIFY_URL: ${MOMO_NOTIFY_URL:-http://localhost:8080/api/payment/momo-notify}
+
       # Logging
       LOGGING_LEVEL_ROOT: INFO
       LOGGING_LEVEL_COM_NHOM10: INFO
@@ -114,14 +138,15 @@ services:
     networks:
       - library-network
     volumes:
-      # Optional: Mount logs directory
       - app-logs:/app/logs
+      # Lưu file upload (avatar, ...) — persist qua container restart
+      - uploads-data:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       timeout: 10s
       retries: 5
       interval: 30s
-      start_period: 60s
+      start_period: 120s
     restart: unless-stopped
 
 # ============================================================
@@ -140,4 +165,6 @@ volumes:
   redis-data:
     driver: local
   app-logs:
+    driver: local
+  uploads-data:
     driver: local

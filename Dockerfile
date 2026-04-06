@@ -61,6 +61,9 @@ RUN apk add --no-cache curl
 # Copy JAR from build stage
 COPY --from=backend-build /app/target/library-1.0.0.jar ./app.jar
 
+# Tạo thư mục uploads trước khi chown — cần thiết để volume mount hoạt động với non-root user
+RUN mkdir -p /app/uploads/avatars
+
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
 
