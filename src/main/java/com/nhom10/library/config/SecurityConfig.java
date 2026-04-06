@@ -98,6 +98,21 @@ public class SecurityConfig {
 
             // ── 4. Authorization Rules ────────────────────────────────────────
             .authorizeHttpRequests(auth -> auth
+                // Static frontend resources (React SPA)
+                .requestMatchers(
+                    "/",
+                    "/index.html",
+                    "/assets/**",
+                    "/favicon.ico",
+                    "/favicon.png",
+                    "/*.js",
+                    "/*.css",
+                    "/*.json",
+                    "/*.png",
+                    "/*.svg",
+                    "/*.ico"
+                ).permitAll()
+
                 // Public endpoints — không cần token
                 .requestMatchers(
                     "/api/auth/**",         // Login, register, forgot/reset password
