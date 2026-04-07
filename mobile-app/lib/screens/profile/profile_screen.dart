@@ -7,7 +7,9 @@ import '../../core/error_messages.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
 import '../gamification/gamification_screen.dart';
+import '../gamification/reward_shop_screen.dart';
 import '../leaderboard/leaderboard_screen.dart';
+import '../subscription/subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -308,6 +310,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const GamificationScreen()),
+          ),
+        ),
+        _buildMenuTile(
+          icon: Icons.redeem_outlined,
+          title: 'Shop Phần Thưởng',
+          subtitle: 'Đổi điểm lấy phần thưởng hấp dẫn',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const RewardShopScreen()),
+          ),
+        ),
+        _buildMenuTile(
+          icon: Icons.workspace_premium_outlined,
+          title: 'Gói Thành Viên',
+          subtitle: _user?['activeSubscriptionPlanName'] != null
+              ? 'Gói hiện tại: ${_user!['activeSubscriptionPlanName']}'
+              : 'Nâng cấp để mở thêm tính năng',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
           ),
         ),
         _buildMenuTile(

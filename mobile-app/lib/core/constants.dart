@@ -44,4 +44,17 @@ class ApiConstants {
   static const String gamificationLeaderboard = '/gamification/leaderboard';
   static const String gamificationRewards = '/gamification/rewards';
   static const String gamificationRedeem = '/gamification/redeem';
+  static const String gamificationRedemptionHistory = '/gamification/redemption-history';
+
+  // Subscriptions
+  static const String subscriptionPlans = '/subscriptions/plans';
+  static const String mySubscription = '/subscriptions/my-subscription';
+  static const String subscriptionActivate = '/subscriptions/activate';
+
+  // Reviews — dynamic: use bookReviews(id) helper
+  static String bookReviews(int bookId) => '/books/$bookId/reviews';
+  static String bookReview(int bookId, int reviewId) => '/books/$bookId/reviews/$reviewId';
+
+  // Book reader — dynamic
+  static String bookRead(int bookId) => '/books/$bookId/read';
 }

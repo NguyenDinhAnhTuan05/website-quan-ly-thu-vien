@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../core/constants.dart';
 import '../../core/error_messages.dart';
 import '../../services/api_service.dart';
+import 'reward_shop_screen.dart';
 
 class GamificationScreen extends StatefulWidget {
   const GamificationScreen({Key? key}) : super(key: key);
@@ -101,6 +102,18 @@ class _GamificationScreenState extends State<GamificationScreen> {
                     pinned: true,
                     floating: true,
                     backgroundColor: AppColors.surface,
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.redeem_outlined,
+                            color: AppColors.primary),
+                        tooltip: 'Shop phần thưởng',
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const RewardShopScreen()),
+                        ),
+                      ),
+                    ],
                     flexibleSpace: FlexibleSpaceBar(
                       titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
                       title: const Text(
