@@ -12,16 +12,8 @@ export default function Navigation() {
       <div className="container-max">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl blur-md opacity-50 group-hover:opacity-75 transition-opacity"></div>
-              <div className="relative w-11 h-11 bg-gradient-to-br from-primary-600 via-primary-700 to-accent-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-                <span className="text-white text-xl font-bold">L</span>
-              </div>
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent hidden sm:inline">
-              Thư Viện
-            </span>
+          <Link to="/" className="flex items-center gap-2 group">
+            <img src="/logo.png" alt="eLibConnect" className="h-10 w-auto group-hover:scale-105 transition-transform" />  
           </Link>
 
           {/* Desktop Menu */}
@@ -34,6 +26,12 @@ export default function Navigation() {
             </Link>
             <Link to="/categories" className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all font-medium">
               Thể loại
+            </Link>
+            <Link to="/leaderboard" className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all font-medium">
+              Bảng xếp hạng
+            </Link>
+            <Link to="/rewards" className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all font-medium">
+              Đổi quà
             </Link>
           </div>
 
@@ -83,6 +81,14 @@ export default function Navigation() {
             <Link to="/categories" onClick={() => setIsOpen(false)} 
               className="block px-4 py-2.5 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all font-medium">
               Thể loại
+            </Link>
+            <Link to="/leaderboard" onClick={() => setIsOpen(false)} 
+              className="block px-4 py-2.5 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all font-medium">
+              Bảng xếp hạng
+            </Link>
+            <Link to="/rewards" onClick={() => setIsOpen(false)} 
+              className="block px-4 py-2.5 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all font-medium">
+              Đổi quà
             </Link>
             {isAuthenticated ? (
               <div className="pt-2">

@@ -50,7 +50,7 @@ export default function BookReaderPage() {
       .then(setBook)
       .catch((err) => {
         if (err.response?.status === 403) {
-          alert(err.response?.data?.message || "Bạn cần gói Premium để đọc sách này.");
+          alert(err.response?.data?.message || "Bạn cần mượn sách này trước khi đọc.");
         }
         navigate(`/books/${id}`);
       })

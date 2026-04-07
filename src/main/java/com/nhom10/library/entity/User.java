@@ -94,6 +94,10 @@ public class User extends BaseEntity {
     @Builder.Default
     private MembershipTier membershipTier = MembershipTier.BRONZE;
 
+    /** Huy hiệu đang sử dụng (referenceId của reward BADGE, vd: 'vip_reader') */
+    @Column(name = "badge", length = 50)
+    private String badge;
+
     // ================================================================
     // RELATIONSHIPS — tất cả LAZY để tránh N+1
     // Không dùng CascadeType.ALL → tránh xóa book/review theo user

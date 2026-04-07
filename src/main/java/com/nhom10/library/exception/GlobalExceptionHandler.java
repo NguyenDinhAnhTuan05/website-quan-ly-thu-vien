@@ -2,13 +2,16 @@ package com.nhom10.library.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -68,6 +71,17 @@ public class GlobalExceptionHandler {
     // 401 — AUTHENTICATION ERRORS
     // ================================================================
 
+    /**
+     * Spring Security method-level security (@PreAuthorize) throws AuthenticationException
+     * khi user chưa đăng nhập. Nếu không bắt ở đây, catch-all Exception sẽ trả về 500.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthenticationException(
+            AuthenticationException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED,
+            "Vui lòng đăng nhập để tiếp tục.", request, null);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, Object>> handleBadCredentials(
             BadCredentialsException ex, WebRequest request) {
@@ -86,6 +100,18 @@ public class GlobalExceptionHandler {
     // 403 — FORBIDDEN
     // ================================================================
 
+    /**
+     * Spring Security method-level security (@PreAuthorize) throws AccessDeniedException
+     * khi user đã đăng nhập nhưng không có quyền. Nếu không bắt ở đây, catch-all
+     * Exception sẽ trả về 500 thay vì 403.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(
+            AccessDeniedException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN,
+            "Bạn không có quyền thực hiện hành động này.", request, null);
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<Map<String, Object>> handleForbidden(
             ForbiddenException ex, WebRequest request) {
@@ -96,6 +122,18 @@ public class GlobalExceptionHandler {
     // ================================================================
     // 404 — NOT FOUND
     // ================================================================
+
+    /**
+     * Spring 6.x / Spring Boot 3.x: NoResourceFoundException khi không tìm thấy handler
+     * cho path được yêu cầu (thay thế NoHandlerFoundException trong Spring 5.x).
+     * Nếu không bắt ở đây, catch-all Exception trả về 500 sai.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFound(
+            NoResourceFoundException ex, WebRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND,
+            "Không tìm thấy tài nguyên yêu cầu.", request, null);
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(

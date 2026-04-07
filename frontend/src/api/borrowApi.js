@@ -16,6 +16,11 @@ const borrowApi = {
     return axiosClient.post(`/borrows/${id}/cancel`);
   },
 
+  /** User tự trả sách (khi BORROWING hoặc OVERDUE) */
+  userReturnBorrow(id) {
+    return axiosClient.post(`/borrows/${id}/user-return`);
+  },
+
   // ── ADMIN ────────────────────────────────────────────────────────────────
 
   /** Admin lấy tất cả phiếu, có thể lọc theo status */

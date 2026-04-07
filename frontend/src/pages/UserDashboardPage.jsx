@@ -9,6 +9,8 @@ import DashboardHero from "../components/dashboard/DashboardHero";
 import BorrowCard from "../components/dashboard/BorrowCard";
 import PointsDashboard from "../components/dashboard/PointsDashboard";
 import MissionList from "../components/dashboard/MissionList";
+import RewardShop from "../components/dashboard/RewardShop";
+import Leaderboard from "../components/dashboard/Leaderboard";
 
 export default function UserDashboardPage() {
   const navigate = useNavigate();
@@ -18,6 +20,7 @@ export default function UserDashboardPage() {
   const [borrows, setBorrows] = useState([]);
   const [totalBorrows, setTotalBorrows] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [pointsKey, setPointsKey] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -33,7 +36,7 @@ export default function UserDashboardPage() {
       const res = await borrowApi.getMyHistory({ page: 0, size: 50, sort: "borrowDate,desc" });
       if (res && res.content) {
         setBorrows(res.content);
-        setTotalBorrows(res.totalElements || res.content.length);
+        setTotalBorrows(res.page?.totalElements ?? res.totalElements ?? res.content.length);
       }
     } catch {
       // Error handled silently
@@ -50,6 +53,17 @@ export default function UserDashboardPage() {
       fetchBorrows();
     } catch (err) {
       showToast(err.response?.data?.message || "Không thể hủy phiếu.", "error");
+    }
+  };
+
+  const handleReturn = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn trả sách?")) return;
+    try {
+      await borrowApi.userReturnBorrow(id);
+      showToast("Đã trả sách thành công!");
+      fetchBorrows();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Không thể trả sách.", "error");
     }
   };
 
@@ -123,7 +137,7 @@ export default function UserDashboardPage() {
             ) : displayBorrows.length > 0 ? (
               <div className="space-y-4">
                 {displayBorrows.map((borrow) => (
-                  <BorrowCard key={borrow.id} borrow={borrow} onCancel={handleCancel} />
+                  <BorrowCard key={borrow.id} borrow={borrow} onCancel={handleCancel} onReturn={handleReturn} />
                 ))}
               </div>
             ) : (
@@ -142,8 +156,10 @@ export default function UserDashboardPage() {
 
           {/* Sidebar Content (1/3 width on LG) */}
           <div className="space-y-6">
-            <PointsDashboard />
+            <PointsDashboard key={pointsKey} />
+            <RewardShop onPointsChanged={() => setPointsKey(k => k + 1)} />
             <MissionList />
+            <Leaderboard />
           </div>
         </div>
       </div>

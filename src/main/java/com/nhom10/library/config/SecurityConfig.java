@@ -133,13 +133,14 @@ public class SecurityConfig {
                 // Uploaded files (avatars, etc.) — served as static resources
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
-                // GET public — ai cũng xem được sách, category, author, series, subscription plans
+                // GET public — ai cũng xem được sách, category, author, series, subscription plans, leaderboard
                 .requestMatchers(HttpMethod.GET,
                     "/api/books/**",
                     "/api/categories/**",
                     "/api/authors/**",
                     "/api/series/**",
-                    "/api/subscriptions/plans"
+                    "/api/subscriptions/plans",
+                    "/api/gamification/leaderboard"
                 ).permitAll()
 
                 // Admin + Super Admin — quản lý toàn hệ thống

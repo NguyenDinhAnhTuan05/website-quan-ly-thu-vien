@@ -106,6 +106,21 @@ public interface BorrowRecordRepository extends JpaRepository<BorrowRecord, Long
                                      @Param("status") BorrowStatus status);
 
     /**
+     * Kiểm tra user đã mượn (đang mượn / quá hạn / đã trả) một cuốn sách chưa.
+     * Dùng trong BookService để ràng buộc: chỉ đọc sách đã từng mượn.
+     */
+    @Query("""
+        SELECT COUNT(br) FROM BorrowRecord br
+        JOIN br.details d
+        WHERE br.user.id  = :userId
+          AND d.book.id   = :bookId
+          AND br.status IN :statuses
+        """)
+    long countByUserAndBookAndStatuses(@Param("userId") Long userId,
+                                       @Param("bookId") Long bookId,
+                                       @Param("statuses") Collection<BorrowStatus> statuses);
+
+    /**
      * Kiểm tra user có phiếu mượn OVERDUE không.
      * Dùng trong BorrowService để chặn tạo phiếu mới khi còn sách quá hạn.
      *

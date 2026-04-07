@@ -88,7 +88,7 @@ export default function AIChatWidget() {
                 <span className="text-lg">🤖</span>
               </div>
               <div>
-                <h3 className="text-white font-bold text-sm">AI Thư Viện</h3>
+                <h3 className="text-white font-bold text-sm">eLibConnect AI</h3>
                 <p className="text-white/70 text-xs">Tư vấn & gợi ý sách cho bạn</p>
               </div>
             </div>

@@ -60,6 +60,33 @@ export default function AdminLayout({ children }) {
       )
     },
     { 
+      path: "/admin/categories", 
+      label: "Quản lý thể loại", 
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      )
+    },
+    { 
+      path: "/admin/series", 
+      label: "Quản lý bộ sách", 
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      )
+    },
+    { 
+      path: "/admin/content", 
+      label: "Nội dung sách", 
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      )
+    },
+    { 
       path: "/admin/subscriptions", 
       label: "Gói thành viên", 
       icon: (
@@ -83,21 +110,11 @@ export default function AdminLayout({ children }) {
       <aside className={`${sidebarOpen ? "w-64" : "w-20"} bg-gray-900 text-white transition-all duration-300 flex flex-col fixed h-full z-30`}>
         {/* Logo */}
         <div className="p-4 border-b border-gray-800">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             {sidebarOpen ? (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-black text-xl">A</span>
-                </div>
-                <div>
-                  <h1 className="font-black text-lg">Admin Panel</h1>
-                  <p className="text-xs text-gray-400">Quản trị hệ thống</p>
-                </div>
-              </div>
+              <img src="/logo.png" alt="eLibConnect" className="h-10 w-auto" />
             ) : (
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center mx-auto">
-                <span className="text-white font-black text-xl">A</span>
-              </div>
+              <img src="/logo.png" alt="eLibConnect" className="h-8 w-auto" />
             )}
           </div>
         </div>
@@ -125,9 +142,17 @@ export default function AdminLayout({ children }) {
           {sidebarOpen ? (
             <div className="mb-3">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-400 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">{user?.username?.[0]?.toUpperCase()}</span>
-                </div>
+                {user?.avatarUrl ? (
+                  <img 
+                    src={user.avatarUrl} 
+                    alt={user.username} 
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-400 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">{user?.username?.[0]?.toUpperCase()}</span>
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">{user?.username}</p>
                   <p className="text-xs text-gray-400 truncate">{user?.email}</p>

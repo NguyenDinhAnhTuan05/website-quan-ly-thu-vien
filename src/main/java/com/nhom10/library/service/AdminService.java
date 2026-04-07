@@ -185,4 +185,19 @@ public class AdminService {
         log.info("Thay đổi trạng thái sách ID={} → available={}", id, saved.isAvailable());
         return BookResponse.from(saved);
     }
+
+    // ================================================================
+    // UPDATE CONTENT — Cập nhật nội dung sách (HTML)
+    // ================================================================
+
+    @CachePut(value = "books", key = "#id")
+    @Transactional
+    public BookResponse updateBookContent(Long id, String content) {
+        Book book = bookRepository.findByIdWithDetails(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Book", "id", id));
+        book.setContent(content);
+        Book saved = bookRepository.save(book);
+        log.info("Cập nhật nội dung sách thành công: ID={}", id);
+        return BookResponse.from(saved);
+    }
 }

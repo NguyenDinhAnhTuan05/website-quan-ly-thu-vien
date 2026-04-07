@@ -4,6 +4,8 @@ import com.nhom10.library.dto.response.*;
 import com.nhom10.library.entity.*;
 import com.nhom10.library.entity.enums.MembershipTier;
 import com.nhom10.library.entity.enums.PointActionType;
+import com.nhom10.library.entity.enums.RewardType;
+import com.nhom10.library.entity.enums.SubscriptionStatus;
 import com.nhom10.library.event.GamificationEvent;
 import com.nhom10.library.exception.BadRequestException;
 import com.nhom10.library.exception.ResourceNotFoundException;
@@ -14,6 +16,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nhom10.library.entity.enums.MissionType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +32,10 @@ public class GamificationService {
     private final PointTransactionRepository pointTransactionRepository;
     private final MissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
+    private final RewardRepository rewardRepository;
+    private final RewardRedemptionRepository rewardRedemptionRepository;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
+    private final UserSubscriptionRepository userSubscriptionRepository;
 
     @EventListener
     @Transactional
@@ -73,16 +80,32 @@ public class GamificationService {
             UserMission userMission = userMissionRepository.findByUserIdAndMissionId(userId, mission.getId())
                     .orElse(null);
 
+            // Qua ngày mới → reset tất cả nhiệm vụ
+            int progress = 0;
+            boolean completed = false;
+            LocalDateTime completedAt = null;
+            if (userMission != null) {
+                if (userMission.isCompleted() && userMission.getCompletedAt() != null
+                        && userMission.getCompletedAt().toLocalDate().isBefore(LocalDate.now())) {
+                    progress = 0;
+                    completed = false;
+                } else {
+                    progress = userMission.getCurrentProgress();
+                    completed = userMission.isCompleted();
+                    completedAt = userMission.getCompletedAt();
+                }
+            }
+
             return MissionResponse.builder()
                     .id(mission.getId())
                     .title(mission.getTitle())
                     .description(mission.getDescription())
                     .pointReward(mission.getPointReward())
                     .missionType(mission.getMissionType())
-                    .currentProgress(userMission != null ? userMission.getCurrentProgress() : 0)
+                    .currentProgress(progress)
                     .requirement(mission.getRequirement())
-                    .isCompleted(userMission != null && userMission.isCompleted())
-                    .completedAt(userMission != null ? userMission.getCompletedAt() : null)
+                    .isCompleted(completed)
+                    .completedAt(completedAt)
                     .build();
         }).collect(Collectors.toList());
     }
@@ -91,27 +114,28 @@ public List<LeaderboardResponse> getMonthlyLeaderboard() {
     LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
     LocalDateTime startDateTime = startOfMonth.atStartOfDay();
 
-    // Lấy tất cả giao dịch điểm trong tháng
+    // Lấy tất cả giao dịch điểm dương trong tháng
     List<PointTransaction> transactions = pointTransactionRepository.findAll().stream()
             .filter(t -> t.getCreatedAt().isAfter(startDateTime))
+            .filter(t -> t.getAmount() > 0)
             .collect(Collectors.toList());
 
     // Gom nhóm theo User và tính tổng điểm
-    Map<User, Integer> userPointsMap = transactions.stream()
-            .collect(Collectors.groupingBy(PointTransaction::getUser, 
+    Map<Long, Integer> userPointsMap = transactions.stream()
+            .collect(Collectors.groupingBy(t -> t.getUser().getId(),
                     Collectors.summingInt(PointTransaction::getAmount)));
 
-    // Chuyển sang DTO, sắp xếp và gán hạng
-    List<LeaderboardResponse> leaderboard = userPointsMap.entrySet().stream()
-            .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // Giảm dần
-            .limit(20) // Lấy Top 20
-            .map(entry -> LeaderboardResponse.builder()
-                    .userId(entry.getKey().getId())
-                    .username(entry.getKey().getUsername() != null ? entry.getKey().getUsername() : entry.getKey().getEmail())
-                    .avatarUrl(entry.getKey().getAvatarUrl())
-                    .membershipTier(entry.getKey().getMembershipTier().toString())
-                    .monthlyPoints(entry.getValue())
+    // Lấy tất cả user, gắn điểm tháng (0 nếu chưa có)
+    List<LeaderboardResponse> leaderboard = userRepository.findAll().stream()
+            .map(u -> LeaderboardResponse.builder()
+                    .userId(u.getId())
+                    .username(u.getUsername() != null ? u.getUsername() : u.getEmail())
+                    .avatarUrl(u.getAvatarUrl())
+                    .membershipTier(u.getMembershipTier().toString())
+                    .monthlyPoints(userPointsMap.getOrDefault(u.getId(), 0))
                     .build())
+            .sorted((a, b) -> Integer.compare(b.getMonthlyPoints(), a.getMonthlyPoints()))
+            .limit(20)
             .collect(Collectors.toList());
 
     // Gán Rank
@@ -152,18 +176,135 @@ public List<LeaderboardResponse> getMonthlyLeaderboard() {
         handleGamificationEvent(new GamificationEvent(this, user, PointActionType.CHECK_IN, null, "Điểm danh hàng ngày"));
     }
 
+    // ======================== REWARD SYSTEM ========================
+
+    @Transactional(readOnly = true)
+    public List<RewardResponse> getAvailableRewards(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        
+        return rewardRepository.findByIsActiveTrue().stream()
+                .map(reward -> RewardResponse.from(reward, user.getPoints()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public RewardRedemptionResponse redeemReward(Long userId, Long rewardId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        
+        Reward reward = rewardRepository.findById(rewardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reward", "id", rewardId));
+
+        if (!reward.isActive()) {
+            throw new BadRequestException("Phần thưởng này không còn khả dụng.");
+        }
+
+        if (reward.getStock() != -1 && reward.getStock() <= 0) {
+            throw new BadRequestException("Phần thưởng này đã hết số lượng.");
+        }
+
+        if (user.getPoints() < reward.getPointCost()) {
+            throw new BadRequestException("Bạn không đủ điểm để đổi phần thưởng này. Cần " + reward.getPointCost() + " XP, hiện có " + user.getPoints() + " XP.");
+        }
+
+        // Trừ điểm
+        user.setPoints(user.getPoints() - reward.getPointCost());
+        updateMembershipTier(user);
+        userRepository.save(user);
+
+        // Ghi lịch sử giao dịch điểm (số âm)
+        PointTransaction transaction = PointTransaction.builder()
+                .user(user)
+                .amount(-reward.getPointCost())
+                .actionType(PointActionType.REDEEM_SUBSCRIPTION)
+                .referenceId(reward.getId().toString())
+                .description("Đổi điểm: " + reward.getName())
+                .build();
+        pointTransactionRepository.save(transaction);
+
+        // Giảm stock nếu có giới hạn  
+        if (reward.getStock() != -1) {
+            reward.setStock(reward.getStock() - 1);
+            rewardRepository.save(reward);
+        }
+
+        // Xử lý theo loại phần thưởng
+        processRewardByType(user, reward);
+
+        // Ghi lịch sử đổi thưởng
+        LocalDateTime expiresAt = reward.getValidityDays() != null
+                ? LocalDateTime.now().plusDays(reward.getValidityDays())
+                : null;
+
+        RewardRedemption redemption = RewardRedemption.builder()
+                .user(user)
+                .reward(reward)
+                .pointsSpent(reward.getPointCost())
+                .status("COMPLETED")
+                .expiresAt(expiresAt)
+                .build();
+        rewardRedemptionRepository.save(redemption);
+
+        log.info("User {} redeemed reward '{}' for {} points", user.getEmail(), reward.getName(), reward.getPointCost());
+
+        return RewardRedemptionResponse.from(redemption);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RewardRedemptionResponse> getRedemptionHistory(Long userId) {
+        return rewardRedemptionRepository.findByUserIdOrderByRedeemedAtDesc(userId)
+                .stream()
+                .map(RewardRedemptionResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    private void processRewardByType(User user, Reward reward) {
+        switch (reward.getRewardType()) {
+            case SUBSCRIPTION -> {
+                Long planId = Long.valueOf(reward.getReferenceId());
+                SubscriptionPlan plan = subscriptionPlanRepository.findById(planId)
+                        .orElseThrow(() -> new BadRequestException("Gói đăng ký không tồn tại."));
+                
+                UserSubscription newSub = UserSubscription.builder()
+                        .user(user)
+                        .plan(plan)
+                        .startDate(LocalDateTime.now())
+                        .endDate(LocalDateTime.now().plusDays(plan.getDurationDays()))
+                        .status(SubscriptionStatus.ACTIVE)
+                        .paymentReference("POINT_REDEEM_" + System.currentTimeMillis())
+                        .build();
+                userSubscriptionRepository.save(newSub);
+                log.info("Activated subscription plan '{}' for user {}", plan.getName(), user.getEmail());
+            }
+            case EXTRA_BORROW -> {
+                log.info("Granted extra borrow slots to user {}", user.getEmail());
+            }
+            case DISCOUNT -> {
+                log.info("Granted discount code to user {}", user.getEmail());
+            }
+            case BADGE -> {
+                user.setBadge(reward.getReferenceId());
+                userRepository.save(user);
+                log.info("Granted badge '{}' to user {}", reward.getReferenceId(), user.getEmail());
+            }
+        }
+    }
+
+    // ======================== HELPER METHODS ========================
+
     private int applyTierMultiplier(MembershipTier tier, int points) {
         return switch (tier) {
-            case GOLD   -> (int) (points * 1.5);   // Hạng Vàng nhận 150% điểm
-            case SILVER -> (int) (points * 1.2);   // Hạng Bạc nhận 120% điểm
-            default     -> points;                  // Hạng Đồng nhận 100% điểm
+            case GOLD   -> (int) (points * 1.5);
+            case SILVER -> (int) (points * 1.2);
+            default     -> points;
         };
     }
 
     private int calculateBasePoints(PointActionType actionType) {
         return switch (actionType) {
-            case CHECK_IN -> 10;
-            case READ_BOOK -> 50;
+            case CHECK_IN -> 50;
+            case READ_BOOK -> 100;
             case REVIEW_BOOK -> 20;
             case BORROW_BOOK -> 5;
             case RETURN_BOOK_ON_TIME -> 30;
@@ -199,6 +340,15 @@ public List<LeaderboardResponse> getMonthlyLeaderboard() {
                                 .isCompleted(false)
                                 .build());
 
+                // Qua ngày mới → reset tất cả nhiệm vụ
+                if (userMission.isCompleted()
+                        && userMission.getCompletedAt() != null
+                        && userMission.getCompletedAt().toLocalDate().isBefore(LocalDate.now())) {
+                    userMission.setCompleted(false);
+                    userMission.setCurrentProgress(0);
+                    userMission.setCompletedAt(null);
+                }
+
                 if (!userMission.isCompleted()) {
                     userMission.setCurrentProgress(userMission.getCurrentProgress() + 1);
                     
@@ -219,7 +369,7 @@ public List<LeaderboardResponse> getMonthlyLeaderboard() {
         String title = mission.getTitle().toLowerCase();
         return switch (actionType) {
             case CHECK_IN -> title.contains("điểm danh");
-            case READ_BOOK -> title.contains("đọc");
+            case READ_BOOK -> title.contains("đọc") || title.contains("sách mới");
             case REVIEW_BOOK -> title.contains("đánh giá");
             default -> false;
         };

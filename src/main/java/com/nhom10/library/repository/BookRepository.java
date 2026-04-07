@@ -111,4 +111,6 @@ public interface BookRepository extends JpaRepository<Book, Long>,
         ORDER BY b.availableQuantity DESC
     """)
     List<Book> findTop10ByKeyword(@Param("keyword") String keyword, org.springframework.data.domain.Pageable pageable);
+
+    List<Book> findBySeriesId(Long seriesId);
 }

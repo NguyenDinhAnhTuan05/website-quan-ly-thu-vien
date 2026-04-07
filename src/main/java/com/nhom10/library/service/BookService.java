@@ -3,15 +3,21 @@ package com.nhom10.library.service;
 import com.nhom10.library.dto.request.BookSearchRequest;
 import com.nhom10.library.dto.response.BookResponse;
 import com.nhom10.library.entity.Book;
-import com.nhom10.library.entity.enums.SubscriptionStatus;
+import com.nhom10.library.entity.User;
+import com.nhom10.library.entity.enums.BorrowStatus;
+import com.nhom10.library.entity.enums.PointActionType;
+import com.nhom10.library.event.GamificationEvent;
 import com.nhom10.library.exception.ForbiddenException;
 import com.nhom10.library.exception.ResourceNotFoundException;
 import com.nhom10.library.repository.BookRepository;
-import com.nhom10.library.repository.UserSubscriptionRepository;
+import com.nhom10.library.repository.BorrowRecordRepository;
+import com.nhom10.library.repository.PointTransactionRepository;
+import com.nhom10.library.repository.UserRepository;
 import com.nhom10.library.specification.BookSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +35,10 @@ import java.util.stream.Collectors;
 public class BookService {
 
     private final BookRepository bookRepository;
-    private final UserSubscriptionRepository userSubscriptionRepository;
+    private final BorrowRecordRepository borrowRecordRepository;
+    private final PointTransactionRepository pointTransactionRepository;
+    private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Tìm kiếm và phân trang sách (đa điều kiện).
@@ -65,35 +74,37 @@ public class BookService {
     }
 
     /**
-     * Đọc nội dung sách — YÊU CẦU ĐĂNG NHẬP + KIỂM TRA SUBSCRIPTION.
+     * Đọc nội dung sách — cần đăng nhập và đã mượn sách.
      *
-     * Logic:
-     *   1. Nếu sách có content/ebookUrl → đây là Ebook trả phí.
-     *   2. User phải có gói subscription ACTIVE (PREMIUM) mới được đọc.
-     *   3. Trả về full BookResponse bao gồm content.
+     * Logic: User phải có phiếu mượn đã duyệt (BORROWING / OVERDUE / RETURNED)
+     * chứa cuốn sách này mới được đọc.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public BookResponse readBookContent(Long userId, Long bookId) {
         Book book = bookRepository.findByIdWithDetails(bookId)
             .orElseThrow(() -> new ResourceNotFoundException("Book", "id", bookId));
 
-        // Nếu sách có nội dung ebook, kiểm tra subscription
-        boolean hasEbookContent = (book.getContent() != null && !book.getContent().isBlank())
-                               || (book.getEbookUrl() != null && !book.getEbookUrl().isBlank());
+        long borrowCount = borrowRecordRepository.countByUserAndBookAndStatuses(
+            userId, bookId,
+            List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE, BorrowStatus.RETURNED)
+        );
 
-        if (hasEbookContent) {
-            boolean hasActiveSubscription = userSubscriptionRepository
-                .findByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE)
-                .stream()
-                .findFirst()
-                .isPresent();
+        if (borrowCount == 0) {
+            throw new ForbiddenException(
+                "Bạn cần mượn sách này trước khi đọc. "
+                + "Vui lòng tạo phiếu mượn và chờ admin duyệt."
+            );
+        }
 
-            if (!hasActiveSubscription) {
-                throw new ForbiddenException(
-                    "Bạn cần đăng ký gói Premium để đọc nội dung sách này. "
-                    + "Vui lòng nâng cấp tài khoản."
-                );
-            }
+        // Publish READ_BOOK event only once per user per book
+        boolean alreadyRewarded = pointTransactionRepository
+            .existsByUserIdAndActionTypeAndReferenceId(userId, PointActionType.READ_BOOK, bookId.toString());
+
+        if (!alreadyRewarded) {
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+            eventPublisher.publishEvent(new GamificationEvent(
+                this, user, PointActionType.READ_BOOK, bookId.toString(), "Đọc sách: " + book.getTitle()));
         }
 
         return BookResponse.from(book);

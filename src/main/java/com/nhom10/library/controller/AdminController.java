@@ -130,4 +130,14 @@ public class AdminController {
             "book_id", id
         ));
     }
+
+    /** Cập nhật nội dung sách thủ công (HTML) */
+    @PatchMapping("/{id}/content")
+    public ResponseEntity<BookResponse> updateBookContent(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String content = body.get("content");
+        BookResponse response = adminService.updateBookContent(id, content);
+        return ResponseEntity.ok(response);
+    }
 }

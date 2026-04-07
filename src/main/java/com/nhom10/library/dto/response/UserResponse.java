@@ -24,6 +24,7 @@ public class UserResponse {
     private String avatarUrl;
     private int points;
     private MembershipTier membershipTier;
+    private String badge;
     private LocalDateTime createdAt;
 
     // Thông tin gói đăng ký đang active (cho admin)
@@ -42,6 +43,7 @@ public class UserResponse {
             .avatarUrl(user.getAvatarUrl())
             .points(user.getPoints())
             .membershipTier(user.getMembershipTier())
+            .badge(user.getBadge())
             .createdAt(user.getCreatedAt())
             .build();
     }
@@ -57,6 +59,7 @@ public class UserResponse {
             .avatarUrl(user.getAvatarUrl())
             .points(user.getPoints())
             .membershipTier(user.getMembershipTier())
+            .badge(user.getBadge())
             .createdAt(user.getCreatedAt());
         if (activeSub != null) {
             builder.activeSubscriptionPlanName(activeSub.getPlan().getName())

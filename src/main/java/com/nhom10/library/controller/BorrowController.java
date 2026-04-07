@@ -88,6 +88,17 @@ public class BorrowController {
     }
 
     /**
+     * User tự trả sách khi đang ở trạng thái BORROWING hoặc OVERDUE.
+     */
+    @PostMapping("/{id}/user-return")
+    @PreAuthorize("hasAuthority('ROLE_USER') or hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<BorrowRecordResponse> userReturnBooks(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(borrowService.userReturnBooks(principal.getId(), id));
+    }
+
+    /**
      * User tự hủy phiếu mượn khi còn ở trạng thái PENDING.
      *
      * Ràng buộc: chỉ chủ sở hữu phiếu mượn mới có thể hủy.

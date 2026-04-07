@@ -5,6 +5,8 @@ import 'explore/explore_screen.dart';
 import 'ai/ai_chat_screen.dart';
 import 'history/history_screen.dart';
 import 'profile/profile_screen.dart';
+import 'leaderboard/leaderboard_screen.dart';
+import 'gamification/gamification_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({Key? key}) : super(key: key);
@@ -21,6 +23,8 @@ class _MainLayoutState extends State<MainLayout> {
     ExploreScreen(),
     AIChatScreen(),
     HistoryScreen(),
+    LeaderboardScreen(),
+    GamificationScreen(),
     ProfileScreen(),
   ];
 
@@ -69,6 +73,16 @@ class _MainLayoutState extends State<MainLayout> {
               icon: Icon(Icons.history_outlined),
               activeIcon: Icon(Icons.history),
               label: 'Lịch sử',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.leaderboard_outlined),
+              activeIcon: Icon(Icons.leaderboard),
+              label: 'Xếp hạng',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.military_tech_outlined),
+              activeIcon: Icon(Icons.military_tech),
+              label: 'Nhiệm vụ',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),

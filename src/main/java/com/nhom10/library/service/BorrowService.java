@@ -283,6 +283,44 @@ public class BorrowService {
         return BorrowRecordResponse.from(savedRecord);
     }
 
+    /**
+     * User tự trả sách — chỉ chủ phiếu mượn mới được trả.
+     */
+    @Transactional
+    public BorrowRecordResponse userReturnBooks(Long userId, Long recordId) {
+        BorrowRecord record = borrowRecordRepository.findByIdWithDetails(recordId)
+            .orElseThrow(() -> new ResourceNotFoundException("BorrowRecord", "id", recordId));
+
+        if (!record.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("Bạn không có quyền trả phiếu mượn này.");
+        }
+        if (record.getStatus() == BorrowStatus.RETURNED) {
+            throw new InvalidBorrowStatusException("Phiếu này đã được trả trước đó.");
+        }
+        if (record.getStatus() != BorrowStatus.BORROWING && record.getStatus() != BorrowStatus.OVERDUE) {
+            throw new InvalidBorrowStatusException("Chỉ có thể trả sách khi đang mượn hoặc quá hạn.");
+        }
+
+        boolean wasOverdue = record.getStatus() == BorrowStatus.OVERDUE;
+
+        record.setStatus(BorrowStatus.RETURNED);
+        record.setReturnDate(LocalDate.now());
+        restoreBorrowedBooks(record);
+
+        User borrower = record.getUser();
+        if (wasOverdue) {
+            int newPoints = Math.max(0, borrower.getPoints() - POINTS_PENALTY_OVERDUE);
+            borrower.setPoints(newPoints);
+        } else {
+            borrower.setPoints(borrower.getPoints() + POINTS_ON_RETURN);
+        }
+        userRepository.save(borrower);
+
+        BorrowRecord savedRecord = borrowRecordRepository.save(record);
+        log.info("User {} đã tự trả phiếu mượn {}", userId, recordId);
+        return BorrowRecordResponse.from(savedRecord);
+    }
+
     /** Admin lấy toàn bộ danh sách phiếu mượn, có thể lọc theo status */
     @Transactional(readOnly = true)
     public Page<BorrowRecordResponse> getAllBorrows(BorrowStatus status, Pageable pageable) {

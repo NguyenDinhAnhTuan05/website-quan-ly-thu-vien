@@ -57,14 +57,14 @@ public class ReviewService {
         Book book = bookRepository.findById(bookId)
             .orElseThrow(() -> new ResourceNotFoundException("Book", "id", bookId));
 
-        // Kiểm tra user đã mượn và trả xong cuốn sách này chưa
-        long returnedBorrows = borrowRecordRepository.countByUserAndBookAndStatus(
-            userId, bookId, BorrowStatus.RETURNED
+        // Kiểm tra user đã mượn cuốn sách này chưa (đang mượn / quá hạn / đã trả)
+        long borrowCount = borrowRecordRepository.countByUserAndBookAndStatuses(
+            userId, bookId,
+            java.util.List.of(BorrowStatus.BORROWING, BorrowStatus.OVERDUE, BorrowStatus.RETURNED)
         );
-        if (returnedBorrows == 0) {
+        if (borrowCount == 0) {
             throw new ForbiddenException(
-                "Bạn chỉ có thể đánh giá sách sau khi đã mượn và trả xong cuốn '"
-                + book.getTitle() + "'."
+                "Bạn cần mượn cuốn '" + book.getTitle() + "' trước khi đánh giá."
             );
         }
 

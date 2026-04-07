@@ -43,7 +43,7 @@ public class AiAssistantService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String GEMINI_API_URL = 
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
     public String getRecommendationFromGemini(Long userId, String userMessage) {
         // 1. Kiểm tra quyền hạn
@@ -89,8 +89,9 @@ public class AiAssistantService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("X-goog-api-key", geminiApiKey);
             HttpEntity<String> entity = new HttpEntity<>(requestJson, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(GEMINI_API_URL + geminiApiKey, entity, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(GEMINI_API_URL, entity, String.class);
             return extractTextFromResponse(response.getBody());
         } catch (Exception e) {
             log.error("AI Error: {}", e.getMessage());

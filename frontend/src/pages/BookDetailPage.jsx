@@ -49,7 +49,7 @@ export default function BookDetailPage() {
       .getReviews(id, { page: 0, size: 20 })
       .then((data) => {
         setReviews(data.content || []);
-        setTotalReviews(data.totalElements || 0);
+        setTotalReviews(data.page?.totalElements ?? data.totalElements ?? 0);
       })
       .catch(() => {});
   }, [id]);

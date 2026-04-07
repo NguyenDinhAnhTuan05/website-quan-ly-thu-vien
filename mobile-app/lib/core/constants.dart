@@ -18,13 +18,30 @@ class ApiConstants {
   // Update this URL to match your backend deploy or local IP if using physical device
   static const String baseUrl = 'http://10.0.2.2:8080/api';
   
-  // Endpoints
+  // Auth
   static const String login = '/auth/login';
   static const String register = '/auth/register';
+
+  // Books
   static const String books = '/books';
   static const String popularBooks = '/books/popular';
+
+  // Misc
   static const String categories = '/categories';
   static const String authors = '/authors';
+
+  // Borrows
   static const String borrows = '/borrows';
   static const String myHistory = '/borrows/my-history';
+
+  // User profile
+  static const String me = '/users/me';
+
+  // Gamification
+  static const String gamificationSummary = '/gamification/summary';
+  static const String gamificationMissions = '/gamification/missions';
+  static const String gamificationCheckIn = '/gamification/daily-check-in';
+  static const String gamificationLeaderboard = '/gamification/leaderboard';
+  static const String gamificationRewards = '/gamification/rewards';
+  static const String gamificationRedeem = '/gamification/redeem';
 }

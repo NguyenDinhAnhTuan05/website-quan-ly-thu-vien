@@ -90,4 +90,34 @@ class ApiService {
     }
     return response;
   }
+
+  Future<http.Response> put(String endpoint, Map<String, dynamic> body) async {
+    final headers = await _getHeaders();
+    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    var response = await http.put(url, headers: headers, body: jsonEncode(body));
+
+    if (response.statusCode == 401) {
+      final refreshed = await _refreshToken();
+      if (refreshed) {
+        final newHeaders = await _getHeaders();
+        response = await http.put(url, headers: newHeaders, body: jsonEncode(body));
+      }
+    }
+    return response;
+  }
+
+  Future<http.Response> delete(String endpoint) async {
+    final headers = await _getHeaders();
+    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    var response = await http.delete(url, headers: headers);
+
+    if (response.statusCode == 401) {
+      final refreshed = await _refreshToken();
+      if (refreshed) {
+        final newHeaders = await _getHeaders();
+        response = await http.delete(url, headers: newHeaders);
+      }
+    }
+    return response;
+  }
 }

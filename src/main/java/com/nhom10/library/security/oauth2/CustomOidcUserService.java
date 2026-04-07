@@ -82,7 +82,12 @@ public class CustomOidcUserService extends OidcUserService {
             );
         }
 
-        user.setAvatarUrl(userInfo.getAvatarUrl());
+        // Chỉ cập nhật avatar nếu user chưa upload avatar tùy chỉnh (local hoặc Cloudinary)
+        if (user.getAvatarUrl() == null 
+                || (!user.getAvatarUrl().startsWith("/uploads/") 
+                    && !user.getAvatarUrl().contains("cloudinary.com"))) {
+            user.setAvatarUrl(userInfo.getAvatarUrl());
+        }
         return userRepository.save(user);
     }
 

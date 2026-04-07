@@ -10,7 +10,8 @@ const buildUser = (res) => ({
   role: res.role,       // 'ROLE_USER' | 'ROLE_ADMIN' | 'ROLE_SUPER_ADMIN'
   avatarUrl: res.avatarUrl ?? null,
   points: res.points ?? 0,
-  membershipTier: res.membershipTier ?? 'BASIC',
+  membershipTier: res.membershipTier ?? 'BRONZE',
+  badge: res.badge ?? null,
 });
 
 /** Chỉ lưu token — KHÔNG lưu user data vào localStorage */

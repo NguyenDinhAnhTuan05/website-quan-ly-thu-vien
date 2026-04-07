@@ -9,7 +9,7 @@ const STATUS_CONFIG = {
   REJECTED: { label: "Bị từ chối", icon: "🚫", gradient: "from-danger-500 to-danger-600" },
 };
 
-export default function BorrowCard({ borrow, onCancel }) {
+export default function BorrowCard({ borrow, onCancel, onReturn }) {
   const st = STATUS_CONFIG[borrow.status] || { label: borrow.status, icon: "📄", gradient: "from-gray-400 to-gray-500" };
 
   return (
@@ -72,6 +72,14 @@ export default function BorrowCard({ borrow, onCancel }) {
               className="px-4 py-2 bg-danger-50 text-danger-600 rounded-lg text-sm font-semibold hover:bg-danger-100 transition-all"
             >
               ❌ Hủy phiếu
+            </button>
+          )}
+          {(borrow.status === "BORROWING" || borrow.status === "OVERDUE") && (
+            <button
+              onClick={() => onReturn(borrow.id)}
+              className="px-4 py-2 bg-success-50 text-success-600 rounded-lg text-sm font-semibold hover:bg-success-100 transition-all"
+            >
+              ✅ Trả sách
             </button>
           )}
         </div>

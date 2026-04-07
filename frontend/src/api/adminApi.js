@@ -33,6 +33,23 @@ const adminApi = {
     return axiosClient.post('/admin/books/crawl', null, { params: { keyword } });
   },
 
+  // ─── QUẢN LÝ NỘI DUNG SÁCH ────────────────────────────────────────────────
+
+  /** Cập nhật nội dung sách (HTML) */
+  updateBookContent(id, content) {
+    return axiosClient.patch(`/admin/books/${id}/content`, { content });
+  },
+
+  /** Sinh nội dung AI cho một sách */
+  generateContentForBook(id) {
+    return axiosClient.post(`/admin/books/${id}/generate-content`);
+  },
+
+  /** Sinh nội dung AI cho tất cả sách chưa có content */
+  generateAllContent() {
+    return axiosClient.post('/admin/books/generate-content');
+  },
+
   // ─── QUẢN LÝ NGƯỜI DÙNG ────────────────────────────────────────────────────
 
   /** Danh sách người dùng (phân trang) */

@@ -30,7 +30,7 @@ public class BookContentGeneratorService {
     private String geminiApiKey;
 
     private static final String GEMINI_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
     /**
      * Generate content for ALL books that have no content yet.
@@ -112,14 +112,15 @@ public class BookContentGeneratorService {
 
         try {
             HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(30))
+                    .connectTimeout(Duration.ofSeconds(60))
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(GEMINI_URL + geminiApiKey))
+                    .uri(URI.create(GEMINI_URL))
                     .header("Content-Type", "application/json")
+                    .header("X-goog-api-key", geminiApiKey)
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                    .timeout(Duration.ofSeconds(120))
+                    .timeout(Duration.ofSeconds(180))
                     .build();
 
             // Retry up to 5 times on 429 (rate limit), with 60s wait
@@ -200,6 +201,20 @@ public class BookContentGeneratorService {
                     case 'n' -> { sb.append('\n'); i += 2; }
                     case 'r' -> { sb.append('\r'); i += 2; }
                     case 't' -> { sb.append('\t'); i += 2; }
+                    case 'u' -> {
+                        // Decode \\uXXXX unicode escapes (e.g. \\u003c to <)
+                        if (i + 5 < jsonResponse.length()) {
+                            String hex = jsonResponse.substring(i + 2, i + 6);
+                            try {
+                                sb.append((char) Integer.parseInt(hex, 16));
+                                i += 6;
+                            } catch (NumberFormatException e) {
+                                sb.append(c); i++;
+                            }
+                        } else {
+                            sb.append(c); i++;
+                        }
+                    }
                     default -> { sb.append(c); i++; }
                 }
             } else if (c == '"') {

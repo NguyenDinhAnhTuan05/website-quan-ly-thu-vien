@@ -7,11 +7,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* About */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-white text-xl font-bold">L</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Thư Viện Số</span>
+            <div className="flex items-center gap-2 mb-4">
+              <img src="/logo.png" alt="eLibConnect" className="h-10 w-auto" />
             </div>
             <p className="text-gray-600 text-sm leading-relaxed max-w-md">
               Nền tảng quản lý thư viện hiện đại, giúp độc giả dễ dàng tìm kiếm
@@ -46,7 +43,7 @@ export default function Footer() {
         <div className="border-t border-gray-200 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-500">
-              © {currentYear} Thư Viện Số. Tất cả quyền được bảo lưu.
+              © {currentYear} eLibConnect. Tất cả quyền được bảo lưu.
             </p>
             <div className="flex gap-6">
               <a href="#" className="text-gray-500 hover:text-gray-900 transition-colors text-sm">

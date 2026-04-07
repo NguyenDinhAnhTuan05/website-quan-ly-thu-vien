@@ -1,4 +1,30 @@
+import { useState, useRef } from "react";
+import uploadApi from "../../api/uploadApi";
+
 export default function AdminBookForm({ editingBook, bookForm, setBookForm, onSubmit, onClose }) {
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState(bookForm.coverUrl || "");
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Preview local
+    setPreview(URL.createObjectURL(file));
+    setUploading(true);
+
+    try {
+      const res = await uploadApi.uploadBookCover(file, editingBook?.id || "new");
+      setBookForm({ ...bookForm, coverUrl: res.url });
+    } catch (err) {
+      alert(err.response?.data?.error || "Lỗi khi upload ảnh bìa");
+      setPreview(bookForm.coverUrl || "");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -38,13 +64,36 @@ export default function AdminBookForm({ editingBook, bookForm, setBookForm, onSu
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">URL ảnh bìa</label>
-              <input
-                type="text"
-                value={bookForm.coverUrl}
-                onChange={(e) => setBookForm({ ...bookForm, coverUrl: e.target.value })}
-                className="input"
-              />
+              <label className="block text-sm font-medium text-gray-900 mb-1">Ảnh bìa</label>
+              <div className="flex items-center gap-4">
+                {(preview || bookForm.coverUrl) && (
+                  <img
+                    src={preview || bookForm.coverUrl}
+                    alt="Ảnh bìa"
+                    className="w-20 h-28 object-cover rounded-lg border border-gray-200"
+                  />
+                )}
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="btn-outline text-sm"
+                  >
+                    {uploading ? "Đang tải lên..." : preview || bookForm.coverUrl ? "Đổi ảnh bìa" : "Chọn ảnh bìa"}
+                  </button>
+                  {bookForm.coverUrl && (
+                    <p className="text-xs text-green-600 mt-1">✓ Đã upload</p>
+                  )}
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">Ngày xuất bản</label>

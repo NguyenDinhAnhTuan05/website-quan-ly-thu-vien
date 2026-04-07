@@ -13,6 +13,20 @@ const gamificationApi = {
   dailyCheckIn: () => {
     return axiosClient.post('/gamification/daily-check-in');
   },
+  // Rewards
+  getRewards: () => {
+    return axiosClient.get('/gamification/rewards');
+  },
+  redeemReward: (rewardId) => {
+    return axiosClient.post('/gamification/redeem', { rewardId });
+  },
+  getRedemptionHistory: () => {
+    return axiosClient.get('/gamification/redemption-history');
+  },
+  // Leaderboard
+  getLeaderboard: () => {
+    return axiosClient.get('/gamification/leaderboard');
+  },
 };
 
 export default gamificationApi;

@@ -51,12 +51,8 @@ public class BookController {
     }
 
     /**
-     * Đọc nội dung sách (YÊU CẦU ĐĂNG NHẬP + SUBSCRIPTION).
+     * Đọc nội dung sách — cần đăng nhập và đã mượn sách.
      * GET /api/books/{id}/read
-     *
-     * Kiểm tra subscription ở tầng Service:
-     *   - Sách có content/ebookUrl → cần gói PREMIUM
-     *   - Sách không có content → trả về bình thường
      */
     @GetMapping("/{id}/read")
     @PreAuthorize("isAuthenticated()")

@@ -26,11 +26,11 @@ export default function AdminOverviewPage() {
         subscriptionApi.getAllPlans(),
       ]);
       setStats({
-        books: bkRes.totalElements || 0,
-        borrows: bRes.totalElements || 0,
-        users: uRes.totalElements || 0,
-        overdue: overdueRes.totalElements || 0,
-        authors: authRes.totalElements || 0,
+        books: bkRes.page?.totalElements ?? bkRes.totalElements ?? 0,
+        borrows: bRes.page?.totalElements ?? bRes.totalElements ?? 0,
+        users: uRes.page?.totalElements ?? uRes.totalElements ?? 0,
+        overdue: overdueRes.page?.totalElements ?? overdueRes.totalElements ?? 0,
+        authors: authRes.page?.totalElements ?? authRes.totalElements ?? 0,
         plans: Array.isArray(planRes) ? planRes.length : 0,
       });
     } catch {

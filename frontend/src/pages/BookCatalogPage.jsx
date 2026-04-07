@@ -56,8 +56,8 @@ export default function BookCatalogPage() {
       const res = await bookApi.getBooks(params);
       if (res && res.content) {
         setBooks(res.content);
-        setTotalPages(res.totalPages);
-        setTotalElements(res.totalElements);
+        setTotalPages(res.page?.totalPages ?? res.totalPages ?? 1);
+        setTotalElements(res.page?.totalElements ?? res.totalElements ?? 0);
       }
     } catch {
       // Error handled silently

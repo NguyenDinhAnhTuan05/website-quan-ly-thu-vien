@@ -14,12 +14,19 @@ import OAuth2CallbackPage from "./pages/OAuth2CallbackPage";
 import UserDashboardPage from "./pages/UserDashboardPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
+import AdminCategoryPage from "./pages/admin/AdminCategoryPage";
+import AdminBookContentPage from "./pages/admin/AdminBookContentPage";
+import AdminSeriesPage from "./pages/admin/AdminSeriesPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import ProfilePage from "./pages/ProfilePage";
 import BookReaderPage from "./pages/BookReaderPage";
 import PaymentPage from "./pages/PaymentPage";
 import CategoryPage from "./pages/CategoryPage";
 import SeriesDetailPage from "./pages/SeriesDetailPage";
+import LeaderboardPage from "./pages/LeaderboardPage";
+import RewardShopPage from "./pages/RewardShopPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ForbiddenPage from "./pages/ForbiddenPage";
 import { useAuthStore } from "./store/index";
 
 export default function App() {
@@ -49,6 +56,15 @@ export default function App() {
                 <Route path="/books/:id" element={<BookDetailPage />} />
                 <Route path="/categories" element={<CategoryPage />} />
                 <Route path="/series/:id" element={<SeriesDetailPage />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
+                <Route
+                  path="/rewards"
+                  element={
+                    <ProtectedRoute>
+                      <RewardShopPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -90,19 +106,8 @@ export default function App() {
                   }
                 />
 
-                <Route
-                  path="*"
-                  element={
-                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-                      <div className="text-6xl mb-4">🔍</div>
-                      <h1 className="heading-2 mb-2">Trang không tồn tại</h1>
-                      <p className="text-gray-600 mb-6">Đường dẫn bạn truy cập không tồn tại.</p>
-                      <a href="/" className="btn-primary">
-                        Về trang chủ
-                      </a>
-                    </div>
-                  }
-                />
+                <Route path="/403" element={<ForbiddenPage />} />
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </PublicLayout>
           }
@@ -120,6 +125,9 @@ export default function App() {
                   <Route path="/borrows" element={<AdminDashboardPage activeTab="borrows" />} />
                   <Route path="/users" element={<AdminDashboardPage activeTab="users" />} />
                   <Route path="/authors" element={<AdminDashboardPage activeTab="authors" />} />
+                  <Route path="/categories" element={<AdminCategoryPage />} />
+                  <Route path="/series" element={<AdminSeriesPage />} />
+                  <Route path="/content" element={<AdminBookContentPage />} />
                   <Route path="/subscriptions" element={<AdminDashboardPage activeTab="subscriptions" />} />
                 </Routes>
               </AdminLayout>

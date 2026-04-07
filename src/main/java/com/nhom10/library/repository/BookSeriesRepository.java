@@ -21,4 +21,7 @@ public interface BookSeriesRepository extends JpaRepository<BookSeries, Long> {
 
     @Query("SELECT DISTINCT s FROM BookSeries s LEFT JOIN s.books b WHERE b IS NOT NULL ORDER BY s.name")
     List<BookSeries> findAllWithBooks();
+
+    @Query("SELECT DISTINCT s FROM BookSeries s LEFT JOIN FETCH s.books ORDER BY s.name")
+    List<BookSeries> findAllWithBooksIncludingEmpty();
 }
